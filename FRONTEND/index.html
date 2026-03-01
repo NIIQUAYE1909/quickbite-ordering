@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QuickBite — Food Ordering · Sekondi-Takoradi</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+  <!-- ========== NAVIGATION ========== -->
+  <nav class="navbar" id="navbar">
+    <div class="logo" onclick="scrollToTop()">Quick<span>Bite</span> 🍽️</div>
+    <ul class="nav-links">
+      <li><a href="#home" onclick="scrollToSection('home')">Home</a></li>
+      <li><a href="#menu" onclick="scrollToSection('menu')">Menu</a></li>
+      <li><a href="#orders" onclick="scrollToSection('orders')">My Orders</a></li>
+      <li><a href="#" onclick="showModal('trackModal')">Track Order</a></li>
+      <li><a href="#" onclick="showAdminLogin()">Admin</a></li>
+    </ul>
+    <div class="nav-right">
+      <button class="wishlist-btn" onclick="toggleWishlist()" title="Favourites">
+        ♡ <span id="wishlistCount">0</span>
+      </button>
+      <button class="cart-btn" onclick="toggleCart()">
+        🛒 Cart <span class="cart-count" id="cartCount">0</span>
+      </button>
+      <div id="authBtn">
+        <button class="btn-signin" onclick="showModal('loginModal')">Sign In</button>
+      </div>
+    </div>
+    <!-- Mobile menu toggle -->
+    <button class="hamburger" id="hamburger" onclick="toggleMobileMenu()">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- Mobile Nav Drawer -->
+  <div class="mobile-drawer" id="mobileDrawer">
+    <a href="#home" onclick="closeMobileMenu()">Home</a>
+    <a href="#menu" onclick="closeMobileMenu()">Menu</a>
+    <a href="#orders" onclick="closeMobileMenu()">My Orders</a>
+    <a href="#" onclick="showModal('trackModal'); closeMobileMenu()">Track Order</a>
+  </div>
+
+  <!-- ========== HERO SECTION ========== -->
+  <section class="hero" id="home">
+    <div class="hero-text">
+      <div class="hero-badge">🔥 Fast Delivery in Sekondi-Takoradi</div>
+      <h1>Delicious Food,<br/><em>Delivered Fast.</em></h1>
+      <p>Order from top local restaurants and get hot meals delivered straight to your door.</p>
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search for food, restaurants..." oninput="filterMenu()"/>
+        <button type="button" onclick="filterMenu()">Search</button>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><strong>200+</strong><span>Restaurants</span></div>
+        <div class="stat"><strong>30min</strong><span>Avg. Delivery</span></div>
+        <div class="stat"><strong>4.8★</strong><span>Rating</span></div>
+      </div>
+    </div>
+    <div class="hero-img">
+      <div class="float-card" onclick="scrollToSection('menu')">🍔<div><p>Smash Burger</p><b>GH₵45</b></div></div>
+      <div class="float-card mid" onclick="scrollToSection('menu')">🍜<div><p>Waakye Special</p><b>GH₵25</b></div></div>
+      <div class="float-card" onclick="scrollToSection('menu')">🍕<div><p>Pepperoni Pizza</p><b>GH₵80</b></div></div>
+    </div>
+  </section>
+
+  <!-- ========== SPECIAL OFFERS BANNER ========== -->
+  <section class="offers-section">
+    <div class="offers-scroll">
+      <div class="offer-card promo1">
+        <div class="offer-tag">LIMITED DEAL</div>
+        <h3>50% Off Your First Order</h3>
+        <p>Use code: <strong>WELCOME50</strong></p>
+        <button type="button" onclick="applyPromo('WELCOME50'); showToast('🎉 50% discount applied!') ">Claim Now →</button>
+      </div>
+      <div class="offer-card promo2">
+        <div class="offer-tag">FREE DELIVERY</div>
+        <h3>Free Delivery All Weekend</h3>
+        <p>No minimum order required</p>
+        <button type="button" onclick="applyPromo('FREEDEL'); showToast('🚚 Free delivery activated!') ">Get Deal →</button>
+      </div>
+      <div class="offer-card promo3">
+        <div class="offer-tag">COMBO DEAL</div>
+        <h3>20% Off Local Dishes</h3>
+        <p>On all local dishes today</p>
+        <button type="button" onclick="scrollToMenu(); applyPromo('LOCAL20'); showToast('🎉 20% off local dishes!')">Order Now →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CATEGORIES ========== -->
+  <section class="categories-section">
+    <h2 class="section-title">What are you <span>craving?</span></h2>
+    <div class="categories" id="categories">
+      <button class="cat-pill active" data-cat="all" onclick="filterCategory('all', this)">🍽️ All</button>
+      <button class="cat-pill" data-cat="burger" onclick="filterCategory('burger', this)">🍔 Burgers</button>
+      <button class="cat-pill" data-cat="pizza" onclick="filterCategory('pizza', this)">🍕 Pizza</button>
+      <button class="cat-pill" data-cat="local" onclick="filterCategory('local', this)">🍜 Local Dishes</button>
+      <button class="cat-pill" data-cat="chicken" onclick="filterCategory('chicken', this)">🍗 Chicken</button>
+      <button class="cat-pill" data-cat="drinks" onclick="filterCategory('drinks', this)">🥤 Drinks</button>
+      <button class="cat-pill" data-cat="dessert" onclick="filterCategory('dessert', this)">🍰 Desserts</button>
+    </div>
+  </section>
+
+  <!-- ========== MENU SECTION ========== -->
+  <section class="menu-section" id="menu">
+    <div class="section-header">
+      <h2 class="section-title">Today's <span>Menu</span></h2>
+      <div class="menu-controls">
+        <p class="menu-count" id="menuCount"></p>
+        <div class="sort-group">
+          <label>Sort:</label>
+          <select id="sortSelect" onchange="applyFilters()">
+            <option value="default">Default</option>
+            <option value="price-asc">Price: Low → High</option>
+            <option value="price-desc">Price: High → Low</option>
+            <option value="rating">Top Rated</option>
+            <option value="popular">Most Popular</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="menu-grid" id="menuGrid">
+      <!-- Populated by JavaScript -->
+    </div>
+  </section>
+
+  <!-- ========== CART SIDEBAR ========== -->
+  <div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
+  <div class="cart-sidebar" id="cartSidebar">
+    <div class="cart-header">
+      <h3>🛒 Your Order</h3>
+      <button onclick="toggleCart()" class="close-btn">✕</button>
+    </div>
+
+    <!-- Promo Code Input -->
+    <div class="promo-section" id="promoSection" style="display:none;">
+      <div class="promo-row">
+        <input type="text" id="promoInput" placeholder="Promo code..." />
+        <button onclick="applyPromoFromCart()">Apply</button>
+      </div>
+      <div id="promoMsg"></div>
+    </div>
+
+    <div class="cart-items" id="cartItems">
+      <div class="empty-cart">Your cart is empty 😔<br/><small>Add some delicious food!</small></div>
+    </div>
+
+    <!-- Special Instructions -->
+    <div id="cartInstructions" style="display:none; padding: 0 1rem;">
+      <textarea id="specialInstructions" placeholder="Special instructions (e.g. no onions, extra spicy...)" rows="2"></textarea>
+    </div>
+
+    <div class="cart-footer" id="cartFooter" style="display:none;">
+      <div class="cart-total">
+        <span>Subtotal:</span>
+        <strong id="cartTotal">GH₵ 0.00</strong>
+      </div>
+      <div class="cart-total" id="discountRow" style="display:none;">
+        <span style="color:var(--success);">Discount:</span>
+        <strong style="color:var(--success);" id="discountAmt">-GH₵ 0.00</strong>
+      </div>
+      <div class="cart-total">
+        <span>Delivery Fee:</span>
+        <strong id="deliveryFeeDisplay">GH₵ 5.00</strong>
+      </div>
+      <hr style="border-color:#2a2a2a; margin: 0.5rem 0;"/>
+      <div class="cart-total big">
+        <span>Total:</span>
+        <strong id="cartGrandTotal">GH₵ 0.00</strong>
+      </div>
+      <button class="btn-checkout" onclick="initiateCheckout()">Place Order 🚀</button>
+      <button class="btn-clear-cart" onclick="clearCart()">Clear Cart</button>
+    </div>
+  </div>
+
+  <!-- ========== WISHLIST SIDEBAR ========== -->
+  <div class="cart-overlay" id="wishlistOverlay" onclick="toggleWishlist()"></div>
+  <div class="cart-sidebar wishlist-sidebar" id="wishlistSidebar">
+    <div class="cart-header">
+      <h3>♡ Favourites</h3>
+      <button onclick="toggleWishlist()" class="close-btn">✕</button>
+    </div>
+    <div class="cart-items" id="wishlistItems">
+      <div class="empty-cart">No favourites yet 💔<br/><small>Tap ♡ on any item!</small></div>
+    </div>
+  </div>
+
+  <!-- ========== MY ORDERS SECTION ========== -->
+  <section class="orders-section" id="orders">
+    <div class="section-header">
+      <h2 class="section-title">My <span>Orders</span></h2>
+      <button class="btn-outline" onclick="clearOrders()" id="clearOrdersBtn" style="display:none;">Clear History</button>
+    </div>
+    <div class="orders-list" id="ordersList">
+      <div class="empty-orders">No orders yet. Start ordering! 🍽️</div>
+    </div>
+  </section>
+
+  <!-- ========== ADMIN PANEL ========== -->
+  <section class="orders-section" id="admin">
+    <div class="section-header">
+      <h2 class="section-title">Admin <span>Panel</span> 🔧</h2>
+      <button class="btn-primary" onclick="loadAllOrders()">🔄 Refresh Orders</button>
+    </div>
+    <div class="admin-stats" id="adminStats"></div>
+    <div class="orders-list" id="adminOrdersList">
+      <div class="empty-orders">Loading orders...</div>
+    </div>
+  </section>
+
+  <!-- ========== CHECKOUT MODAL ========== -->
+  <div class="modal-overlay" id="checkoutModal" onclick="closeModalOutside(event, 'checkoutModal')">
+    <div class="modal modal-wide">
+      <button class="modal-close" onclick="closeModal('checkoutModal')">✕</button>
+      <h2>Complete Your Order 🧾</h2>
+      <p class="modal-sub">Just a few details and your food is on its way!</p>
+
+      <div class="checkout-grid">
+        <div class="checkout-left">
+          <h4 class="section-mini-title">Delivery Details</h4>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="checkoutName" placeholder="John Mensah"/>
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="tel" id="checkoutPhone" placeholder="024 XXX XXXX"/>
+          </div>
+          <div class="form-group">
+            <label>Delivery Address</label>
+            <input type="text" id="checkoutAddress" placeholder="Area, Street, House No."/>
+          </div>
+          <div class="form-group">
+            <label>Delivery Zone</label>
+            <select id="checkoutZone" onchange="updateDeliveryFee()">
+              <option value="5">Takoradi Central (GH₵5)</option>
+              <option value="8">Sekondi (GH₵8)</option>
+              <option value="10">Effia-Kwesimintsim (GH₵10)</option>
+              <option value="12">Airport Ridge (GH₵12)</option>
+              <option value="15">Anaji / Apremdo (GH₵15)</option>
+            </select>
+          </div>
+
+          <h4 class="section-mini-title" style="margin-top:1.5rem;">Payment Method</h4>
+          <div class="payment-options">
+            <label class="payment-opt">
+              <input type="radio" name="payment" value="momo" checked onchange="togglePaymentFields()"/>
+              <span>📱 Mobile Money</span>
+            </label>
+            <label class="payment-opt">
+              <input type="radio" name="payment" value="cash" onchange="togglePaymentFields()"/>
+              <span>💵 Cash on Delivery</span>
+            </label>
+            <label class="payment-opt">
+              <input type="radio" name="payment" value="card" onchange="togglePaymentFields()"/>
+              <span>💳 Card Payment</span>
+            </label>
+          </div>
+
+          <div id="momoFields">
+            <div class="form-group">
+              <label>MoMo Number</label>
+              <input type="tel" id="momoNumber" placeholder="024 XXX XXXX"/>
+            </div>
+            <div class="form-group">
+              <label>Network</label>
+              <select id="momoNetwork">
+                <option>MTN MoMo</option>
+                <option>Vodafone Cash</option>
+                <option>AirtelTigo Money</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="cardFields" style="display:none;">
+            <div class="form-group">
+              <label>Card Number</label>
+              <input type="text" id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" maxlength="19" oninput="formatCard(this)"/>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Expiry</label>
+                <input type="text" id="cardExpiry" placeholder="MM/YY" maxlength="5"/>
+              </div>
+              <div class="form-group">
+                <label>CVV</label>
+                <input type="text" id="cardCVV" placeholder="XXX" maxlength="3"/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="checkout-right">
+          <h4 class="section-mini-title">Order Summary</h4>
+          <div id="checkoutSummary"></div>
+          <div class="checkout-totals" id="checkoutTotals"></div>
+        </div>
+      </div>
+
+      <button class="btn-primary full" onclick="placeOrder()" style="margin-top:1.5rem;">
+        Confirm & Place Order 🚀
+      </button>
+    </div>
+  </div>
+
+  <!-- ========== ORDER TRACKING MODAL ========== -->
+  <div class="modal-overlay" id="trackModal" onclick="closeModalOutside(event, 'trackModal')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('trackModal')">✕</button>
+      <h2>Track Your Order 📍</h2>
+      <p class="modal-sub">Enter your order ID to see live status</p>
+      <div class="form-group">
+        <label>Order ID</label>
+        <input type="text" id="trackInput" placeholder="e.g. QB-1234567890"/>
+      </div>
+      <button class="btn-primary full" onclick="trackOrder()">Track Order</button>
+      <div id="trackResult" style="margin-top:1rem;"></div>
+    </div>
+  </div>
+
+  <!-- ========== LOGIN MODAL ========== -->
+  <div class="modal-overlay" id="loginModal" onclick="closeModalOutside(event, 'loginModal')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('loginModal')">✕</button>
+      <h2>Welcome Back 👋</h2>
+      <p class="modal-sub">Sign in to track your orders</p>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="you@example.com"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="password-wrap">
+          <input type="password" id="loginPassword" placeholder="••••••••"/>
+          <button class="toggle-pw" onclick="togglePassword('loginPassword')">👁</button>
+        </div>
+      </div>
+      <button class="btn-primary full" onclick="login()">Sign In</button>
+      <p class="modal-switch">Don't have an account? <a onclick="showModal('registerModal'); closeModal('loginModal')">Register</a></p>
+    </div>
+  </div>
+
+  <!-- ========== REGISTER MODAL ========== -->
+  <div class="modal-overlay" id="registerModal" onclick="closeModalOutside(event, 'registerModal')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('registerModal')">✕</button>
+      <h2>Create Account 🎉</h2>
+      <p class="modal-sub">Join QuickBite today</p>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="regName" placeholder="John Mensah"/>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="regEmail" placeholder="you@example.com"/>
+      </div>
+      <div class="form-group">
+        <label>Phone</label>
+        <input type="tel" id="regPhone" placeholder="024 XXX XXXX"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="password-wrap">
+          <input type="password" id="regPassword" placeholder="••••••••"/>
+          <button class="toggle-pw" onclick="togglePassword('regPassword')">👁</button>
+        </div>
+      </div>
+      <button class="btn-primary full" onclick="register()">Create Account</button>
+      <p class="modal-switch">Already have an account? <a onclick="showModal('loginModal'); closeModal('registerModal')">Sign In</a></p>
+    </div>
+  </div>
+
+  <!-- ========== FOOD DETAILS MODAL ========== -->
+  <div class="modal-overlay" id="foodModal" onclick="closeModalOutside(event, 'foodModal')">
+    <div class="modal" id="foodModalContent">
+      <button class="modal-close" onclick="closeModal('foodModal')">✕</button>
+      <div id="foodModalBody"></div>
+    </div>
+  </div>
+
+  <!-- ========== ADMIN LOGIN MODAL ========== -->
+  <div class="modal-overlay" id="adminLoginModal" onclick="closeModalOutside(event, 'adminLoginModal')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('adminLoginModal')">✕</button>
+      <h2>🔐 Admin Login</h2>
+      <p class="modal-sub">Enter admin credentials to access the panel</p>
+      <div class="form-group">
+        <label>Admin Password</label>
+        <input type="password" id="adminPassword" placeholder="Enter admin password"/>
+      </div>
+      <button class="btn-primary full" onclick="verifyAdmin()">Login</button>
+      <p id="adminLoginError" style="color:red; margin-top:0.5rem; display:none;">Incorrect password!</p>
+    </div>
+  </div>
+
+  <!-- ========== ORDER SUCCESS MODAL ========== -->
+  <div class="modal-overlay" id="successModal">
+    <div class="modal success-modal">
+      <div class="success-icon">🎉</div>
+      <h2>Order Placed!</h2>
+      <p class="modal-sub" id="successMsg">Your food is being prepared.</p>
+      <div class="order-id-display" id="successOrderId"></div>
+      <div class="track-steps">
+        <div class="step active" id="step1">✅ Order Confirmed</div>
+        <div class="step" id="step2">👨‍🍳 Preparing...</div>
+        <div class="step" id="step3">🛵 On the way...</div>
+        <div class="step" id="step4">📦 Delivered!</div>
+      </div>
+      <button class="btn-primary full" onclick="closeModal('successModal')" style="margin-top:1.5rem;">
+        Continue Browsing
+      </button>
+    </div>
+  </div>
+
+  <!-- ========== REVIEW MODAL ========== -->
+  <div class="modal-overlay" id="reviewModal" onclick="closeModalOutside(event, 'reviewModal')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('reviewModal')">✕</button>
+      <h2>Rate Your Order ⭐</h2>
+      <p class="modal-sub" id="reviewItemName">How was it?</p>
+      <div class="star-rating" id="starRating">
+        <span onclick="setRating(1)">★</span>
+        <span onclick="setRating(2)">★</span>
+        <span onclick="setRating(3)">★</span>
+        <span onclick="setRating(4)">★</span>
+        <span onclick="setRating(5)">★</span>
+      </div>
+      <div class="form-group" style="margin-top:1rem;">
+        <label>Your Review</label>
+        <textarea id="reviewText" placeholder="Tell us what you thought..." rows="3" style="width:100%; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:0.75rem 1rem; color:var(--text); font-family:'DM Sans',sans-serif; outline:none; resize:vertical;"></textarea>
+      </div>
+      <button class="btn-primary full" onclick="submitReview()">Submit Review</button>
+    </div>
+  </div>
+
+  <!-- ========== TOAST NOTIFICATION ========== -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ========== FOOTER ========== -->
+  <footer>
+    <div class="footer-content">
+      <div class="footer-brand">
+        <div class="footer-logo">Quick<span>Bite</span> 🍽️</div>
+        <p>Bringing Sekondi-Takoradi's best food straight to your door.</p>
+        <div class="footer-socials">
+          <a href="https://www.tiktok.com/@ma1neverse?_r=1&_t=ZS-94KVuo3t7kF" title="Tiktok">📘</a>
+          <a href="#" title="Instagram">📸</a>
+          <a href="#" title="Twitter">🐦</a>
+          <a href="0501830780" title="WhatsApp">💬</a>
+        </div>
+      </div>
+      <div class="footer-links">
+        <h5>Quick Links</h5>
+        <a href="#menu">Menu</a>
+        <a href="#orders">My Orders</a>
+        <a href="#" onclick="showModal('trackModal')">Track Order</a>
+        <a href="#" onclick="showModal('loginModal')">Sign In</a>
+      </div>
+      <div class="footer-links">
+        <h5>Support</h5>
+        <a href="#">Help Center</a>
+        <a href="#">Contact Us</a>
+        <a href="#">Refund Policy</a>
+        <a href="#">Privacy Policy</a>
+      </div>
+      <div class="footer-links">
+        <h5>Contact</h5>
+        <p>📍 Takoradi, Western Region</p>
+        <p>📞 +233 50 95 11 074</p>
+        <p>✉️ quayen010@gmail.com</p>
+        <p>🕐 8am – 11pm Daily</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 QuickBite. Built with ❤️ for Ghana 🇬🇭</p>
+      <p>Sekondi-Takoradi, Western Region</p>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>
