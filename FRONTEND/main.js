@@ -116,12 +116,42 @@ let activePromo = null;
 let currentRating = 0;
 let reviewItemId = null;
 let deliveryFee = 5;
+let trackedOrdersHistory = [];
+
+// ---------- THEME TOGGLE ----------
+function toggleTheme() {
+  const body = document.body;
+  const btn  = document.getElementById('themeToggleBtn');
+  const isLight = body.classList.toggle('light-mode');
+
+  // Update button icon
+  if (btn) btn.textContent = isLight ? '🌙' : '☀️';
+
+  // Persist preference
+  try { localStorage.setItem('qb_theme', isLight ? 'light' : 'dark'); } catch(e) {}
+
+  showToast(isLight ? '☀️ Light mode on' : '🌙 Dark mode on');
+}
+
+function applyTheme() {
+  try {
+    const saved = localStorage.getItem('qb_theme');
+    if (saved === 'light') {
+      document.body.classList.add('light-mode');
+      const btn = document.getElementById('themeToggleBtn');
+      if (btn) btn.textContent = '🌙';
+    }
+  } catch(e) {}
+}
 
 // ---------- INIT ----------
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Apply saved theme first (before anything renders)
+  applyTheme();
+
   // Load saved state from localStorage
   loadState();
-  renderMenu(menuData);
+  await loadFoods();
   renderOrders();
   updateAuthUI();
   updateWishlistUI();
@@ -143,6 +173,84 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// ---------- LOAD MENU FROM BACKEND ----------
+async function loadFoods() {
+  try {
+    const res = await fetch(`${API_BASE}/foods`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const foods = await res.json();
+    if (!Array.isArray(foods)) throw new Error('Invalid foods payload');
+
+    // Keep local fields that UI expects, with safe defaults
+    const normalized = foods.map((f) => ({
+      id: Number(f.id),
+      name: f.name || 'Unnamed item',
+      description: f.description || '',
+      price: Number(f.price || 0),
+      emoji: f.emoji || '🍽️',
+      imageUrl: f.image_url || f.imageUrl || getFoodImageForItem(f),
+      category: (f.category || 'other').toLowerCase(),
+      rating: Number(f.rating || 0),
+      reviews: Number(f.reviews || 0),
+      badge: f.badge || null,
+      prepTime: f.prepTime || '15–20 min',
+      calories: Number(f.calories || 0),
+      popular: Boolean(f.popular)
+    }));
+
+    // Mutate existing array so all references remain valid
+    menuData.length = 0;
+    menuData.push(...normalized);
+
+    renderMenu(menuData);
+  } catch (error) {
+    console.warn('Failed to load foods from backend, using local fallback:', error);
+    menuData.forEach((item) => {
+      if (!item.imageUrl) item.imageUrl = getFoodImageForItem(item);
+    });
+    renderMenu(menuData);
+    showToast('⚠️ Backend menu unavailable. Showing local menu.');
+  }
+}
+
+function getFoodImageForItem(item) {
+  const name = (item?.name || '').toLowerCase();
+  const category = (item?.category || '').toLowerCase();
+
+  // Real food photos (stable links), matched by item name first
+  const byName = [
+    { key: 'double smash burger', url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'cheese burger deluxe', url: 'https://images.unsplash.com/photo-1553979459-d2229ba7433b?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'classic margherita', url: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'pepperoni pizza', url: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'bbq chicken pizza', url: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'waakye special', url: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'jollof rice special', url: 'https://images.unsplash.com/photo-1534939561126-855b8675edd7?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'grilled chicken combo', url: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'spicy wings', url: 'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'chicken shawarma', url: 'https://images.unsplash.com/photo-1529006557810-274b9b2fc783?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'banku & tilapia', url: 'https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'chocolate lava cake', url: 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'strawberry cheesecake', url: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'fresh fruit smoothie', url: 'https://images.unsplash.com/photo-1502741224143-90386d7f8c82?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'sobolo delight', url: 'https://images.unsplash.com/photo-1556881286-fc6915169721?auto=format&fit=crop&w=1000&q=80' }
+  ];
+
+  const exact = byName.find((x) => name.includes(x.key));
+  if (exact) return exact.url;
+
+  // Category fallback photos
+  if (category === 'burger') return 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1000&q=80';
+  if (category === 'pizza') return 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1000&q=80';
+  if (category === 'chicken') return 'https://images.unsplash.com/photo-1562967916-eb82221dfb92?auto=format&fit=crop&w=1000&q=80';
+  if (category === 'local') return 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=1000&q=80';
+  if (category === 'dessert') return 'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=1000&q=80';
+  if (category === 'drinks') return 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=1000&q=80';
+
+  return 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1000&q=80';
+}
+
 // ---------- SAVE / LOAD STATE (localStorage) ----------
 function saveState() {
   try {
@@ -150,6 +258,7 @@ function saveState() {
     localStorage.setItem('qb_wishlist', JSON.stringify(wishlist));
     localStorage.setItem('qb_orders', JSON.stringify(orders));
     localStorage.setItem('qb_user', JSON.stringify(currentUser));
+    localStorage.setItem('qb_track_history', JSON.stringify(trackedOrdersHistory));
   } catch (e) {}
 }
 
@@ -159,9 +268,10 @@ function loadState() {
     wishlist  = JSON.parse(localStorage.getItem('qb_wishlist')) || [];
     orders    = JSON.parse(localStorage.getItem('qb_orders'))   || [];
     currentUser = JSON.parse(localStorage.getItem('qb_user'))   || null;
+    trackedOrdersHistory = JSON.parse(localStorage.getItem('qb_track_history')) || [];
     updateCartUI();
   } catch (e) {
-    cart = []; wishlist = []; orders = []; currentUser = null;
+    cart = []; wishlist = []; orders = []; currentUser = null; trackedOrdersHistory = [];
   }
 }
 
@@ -185,7 +295,9 @@ function renderMenu(items) {
     return `
     <div class="menu-card" style="animation-delay:${index * 0.05}s;" onclick="showFoodDetails(${item.id})">
       <div class="menu-card-img">
-        <span>${item.emoji}</span>
+        ${item.imageUrl
+          ? `<img src="${item.imageUrl}" alt="${item.name}" class="menu-card-photo" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"/><span class="menu-emoji-fallback" style="display:none;">${item.emoji}</span>`
+          : `<span>${item.emoji}</span>`}
         ${item.badge ? `<div class="menu-badge">${item.badge}</div>` : ''}
         <button class="card-wishlist-btn ${isWishlisted ? 'liked' : ''}"
           onclick="event.stopPropagation(); toggleWishlistItem(${item.id})"
@@ -218,7 +330,9 @@ function showFoodDetails(itemId) {
 
   document.getElementById('foodModalBody').innerHTML = `
     <div style="text-align:center;">
-      <div style="font-size:5.5rem; margin-bottom:1rem; line-height:1;">${item.emoji}</div>
+      ${item.imageUrl
+        ? `<img src="${item.imageUrl}" alt="${item.name}" class="food-modal-photo" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"/><div class="food-modal-emoji-fallback" style="display:none;">${item.emoji}</div>`
+        : `<div style="font-size:5.5rem; margin-bottom:1rem; line-height:1;">${item.emoji}</div>`}
       ${item.badge ? `<span class="menu-badge" style="position:relative; display:inline-block; margin-bottom:0.8rem;">${item.badge}</span><br/>` : ''}
       <h2 style="font-family:'Playfair Display',serif; margin-bottom:0.4rem;">${item.name}</h2>
       <p style="color:var(--muted); margin-bottom:1rem; font-size:0.88rem;">${item.description}</p>
@@ -504,8 +618,10 @@ function initiateCheckout() {
 
   // Prefill name if logged in
   if (currentUser) {
-    document.getElementById('checkoutName').value = currentUser.name || '';
+    document.getElementById('checkoutName').value  = currentUser.name  || '';
     document.getElementById('checkoutPhone').value = currentUser.phone || '';
+    const emailEl = document.getElementById('checkoutEmail');
+    if (emailEl) emailEl.value = currentUser.email || '';
   }
 
   renderCheckoutSummary();
@@ -563,6 +679,7 @@ const API_BASE = 'http://localhost:8080/api';
 async function placeOrder() {
   // Validate fields
   const name    = document.getElementById('checkoutName').value.trim();
+  const email   = document.getElementById('checkoutEmail')?.value.trim() || '';
   const phone   = document.getElementById('checkoutPhone').value.trim();
   const address = document.getElementById('checkoutAddress').value.trim();
   const method  = document.querySelector('input[name="payment"]:checked').value;
@@ -596,9 +713,11 @@ async function placeOrder() {
   // Data for backend (simple format)
   const backendOrderData = {
     customer_name: name,
+    customer_email: email,
     phone: phone,
     address: address,
-    total: grandTotal
+    total: grandTotal,
+    items: cart.map(i => ({ id: i.id, qty: i.qty, price: i.price }))
   };
 
   // Data for local display (complex format)
@@ -611,6 +730,7 @@ async function placeOrder() {
     instructions,
     promo: activePromo,
     time: new Date().toLocaleString('en-GH', { dateStyle: 'medium', timeStyle: 'short' }),
+    orderedAt: new Date().toISOString(),
     status: 'Confirmed'
   };
 
@@ -623,8 +743,9 @@ async function placeOrder() {
     });
     if (res.ok) {
       const result = await res.json();
-      orderData.id = `QB-${result.orderId || Date.now()}`;
+      orderData.id = Number(result.orderId || Date.now());
       orderData.status = result.status || 'Confirmed';
+      orderData.orderedAt = new Date().toISOString();
     }
   } catch (_) {
     // Use local fallback — already set above
@@ -803,7 +924,7 @@ async function loadAllOrdersAdmin() {
       stats.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem;"><div style="background:var(--card); padding:1rem; border-radius:12px; text-align:center; border:1px solid var(--border);"><div style="font-size:1.8rem; font-weight:700; color:var(--accent);">${dbOrders.length}</div><div style="font-size:0.8rem; color:var(--muted);">Total Orders</div></div><div style="background:var(--card); padding:1rem; border-radius:12px; text-align:center; border:1px solid var(--border);"><div style="font-size:1.8rem; font-weight:700; color:var(--success);">GH₵ ${totalRevenue.toFixed(2)}</div><div style="font-size:0.8rem; color:var(--muted);">Total Revenue</div></div><div style="background:var(--card); padding:1rem; border-radius:12px; text-align:center; border:1px solid var(--border);"><div style="font-size:1.8rem; font-weight:700; color:orange;">${confirmed}</div><div style="font-size:0.8rem; color:var(--muted);">Confirmed</div></div><div style="background:var(--card); padding:1rem; border-radius:12px; text-align:center; border:1px solid var(--border);"><div style="font-size:1.8rem; font-weight:700; color:blue;">${onTheWay}</div><div style="font-size:0.8rem; color:var(--muted);">On the Way</div></div><div style="background:var(--card); padding:1rem; border-radius:12px; text-align:center; border:1px solid var(--border);"><div style="font-size:1.8rem; font-weight:700; color:green;">${delivered}</div><div style="font-size:0.8rem; color:var(--muted);">Delivered</div></div></div>`;
     }
     
-    list.innerHTML = dbOrders.map(order => `<div class="order-card" style="flex-direction:column; gap:0.5rem;"><div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;"><div><strong style="font-size:1.1rem;">📦 Order #${order.id}</strong><span style="margin-left:0.5rem; padding:0.2rem 0.5rem; border-radius:6px; font-size:0.75rem; background:${order.status === 'Delivered' ? 'green' : order.status === 'On the way' ? 'blue' : order.status === 'Preparing' ? 'orange' : 'var(--accent)'};">${order.status}</span></div><div style="font-weight:700; color:var(--accent); font-size:1.2rem;">GH₵ ${parseFloat(order.total || 0).toFixed(2)}</div></div><div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0.5rem; font-size:0.85rem; color:var(--muted);"><div><strong>👤 Customer:</strong> ${order.customer_name || 'N/A'}</div><div><strong>📱 Phone:</strong> ${order.phone || 'N/A'}</div><div><strong>📍 Address:</strong> ${order.address || 'N/A'}</div><div><strong>🕐 Time:</strong> ${order.created_at || 'N/A'}</div>${order.driver_name ? `<div><strong>🚗 Driver:</strong> ${order.driver_name} (${order.driver_phone || 'N/A'})</div>` : ''}</div><div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid var(--border);">${order.status === 'Confirmed' ? `<button onclick="updateOrderStatus(${order.id}, 'Preparing')" style="background:orange; color:white; border:none; padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer;">🍳 Start Preparing</button>` : ''}${order.status === 'Preparing' ? `<button onclick="showAssignDriverModal(${order.id}, '${order.customer_name}', '${order.phone}', '${order.address}', ${order.total})" style="background:blue; color:white; border:none; padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer;">🚗 Assign Driver</button>` : ''}${order.status === 'On the way' ? `<button onclick="updateOrderStatus(${order.id}, 'Delivered')" style="background:green; color:white; border:none; padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer;">✅ Mark Delivered</button>` : ''}</div></div>`).join('');
+    list.innerHTML = dbOrders.map(order => `<div class="order-card" style="flex-direction:column; gap:0.5rem;"><div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;"><div><strong style="font-size:1.1rem;">📦 Order #${order.id}</strong><span style="margin-left:0.5rem; padding:0.2rem 0.5rem; border-radius:6px; font-size:0.75rem; background:${order.status === 'Delivered' ? '#22c55e' : order.status === 'On the way' ? '#3b82f6' : order.status === 'Preparing' ? '#f59e0b' : 'var(--accent)'};">${order.status}</span></div><div style="font-weight:700; color:var(--accent); font-size:1.2rem;">GH₵ ${parseFloat(order.total || 0).toFixed(2)}</div></div><div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0.5rem; font-size:0.85rem; color:var(--muted);"><div><strong>👤 Customer:</strong> ${order.customer_name || 'N/A'}</div><div><strong>📱 Phone:</strong> ${order.phone || 'N/A'}</div><div><strong>📍 Address:</strong> ${order.address || 'N/A'}</div><div><strong>🕐 Time:</strong> ${order.created_at || 'N/A'}</div>${order.driver_name ? `<div><strong>🚗 Driver:</strong> ${order.driver_name} (${order.driver_phone || 'N/A'})</div>` : ''}</div><div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid var(--border);">${order.status === 'Confirmed' ? `<button onclick="updateOrderStatus(${order.id}, 'Preparing')" style="background:#f59e0b; color:white; border:none; padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer; font-family:'DM Sans',sans-serif;">🍳 Start Preparing</button>` : ''}${order.status === 'Preparing' ? `<button onclick="showAssignDriverModal(${order.id}, '${order.customer_name}', '${order.phone}', '${order.address}', ${order.total})" style="background:#3b82f6; color:white; border:none; padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer; font-family:'DM Sans',sans-serif;">🚗 Assign Driver</button>` : ''}${order.status === 'On the way' ? `<button onclick="updateOrderStatus(${order.id}, 'Delivered')" style="background:#22c55e; color:white; border:none; padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer; font-family:'DM Sans',sans-serif;">✅ Mark Delivered</button><button class="track-live-btn" onclick="trackOrderById(${order.id})">📍 Track Live</button>` : ''}</div></div>`).join('');
     
   } catch (error) {
     console.error('Error loading orders:', error);
@@ -869,7 +990,7 @@ async function updateOrderStatus(orderId, newStatus) {
 }
 
 function reorder(orderId) {
-  const order = orders.find(o => o.id === orderId);
+  const order = findOrderById(orderId);
   if (!order) return;
 
   order.items.forEach(i => {
@@ -886,106 +1007,357 @@ function reorder(orderId) {
   toggleCart();
 }
 
-// ---------- ORDER TRACKING ----------
+// =============================================
+// REAL-TIME ORDER TRACKING
+// =============================================
+let trackingPollInterval = null;
+let currentTrackedOrderId = null;
+
+function stopTrackingPoll() {
+  if (trackingPollInterval) {
+    clearInterval(trackingPollInterval);
+    trackingPollInterval = null;
+  }
+  currentTrackedOrderId = null;
+  const mapContainer = document.getElementById('liveMapContainer');
+  if (mapContainer) mapContainer.style.display = 'none';
+}
+
 async function trackOrder() {
   const input = document.getElementById('trackInput').value.trim();
   if (!input) { showToast('⚠️ Enter an order ID'); return; }
-  
+
+  const orderId = normalizeOrderId(input);
+  if (!orderId) { showToast('⚠️ Enter a valid numeric order ID'); return; }
+
   const result = document.getElementById('trackResult');
   if (!result) return;
-  
-  result.innerHTML = '<p style="color:var(--muted);">Loading order details...</p>';
-  
+
+  result.innerHTML = '<p style="color:var(--muted); text-align:center; padding:1rem;">⏳ Loading order details...</p>';
+
+  // Stop any previous poll
+  stopTrackingPoll();
+  currentTrackedOrderId = orderId;
+
+  // Initial fetch
+  await fetchAndRenderTracking(orderId);
+
+  // Poll every 5 seconds for live updates
+  trackingPollInterval = setInterval(async () => {
+    if (currentTrackedOrderId !== orderId) { clearInterval(trackingPollInterval); return; }
+    await fetchAndRenderTracking(orderId);
+  }, 5000);
+}
+
+async function fetchAndRenderTracking(orderId) {
+  const result = document.getElementById('trackResult');
+  if (!result) return;
+
   try {
-    // Fetch order from backend
-    const response = await fetch(`${API_BASE}/orders`);
-    const dbOrders = await response.json();
-    const order = dbOrders.find(o => o.id === parseInt(input));
-    
-    if (!order) {
-      result.innerHTML = `<p style="color:var(--error); font-size:0.85rem;">❌ Order not found. Check the ID and try again.</p>`;
-      return;
+    // Try real-time tracking endpoint first
+    let trackData = null;
+    try {
+      const trackRes = await fetch(`${API_BASE}/tracking?order_id=${orderId}`);
+      if (trackRes.ok) trackData = await trackRes.json();
+    } catch (_) {}
+
+    // Fallback: fetch from orders list
+    if (!trackData) {
+      const ordersRes = await fetch(`${API_BASE}/orders`);
+      const dbOrders  = await ordersRes.json();
+      const order     = dbOrders.find(o => o.id === orderId);
+      if (!order) {
+        result.innerHTML = `<div class="track-error">❌ Order #${orderId} not found. Check the ID and try again.</div>`;
+        stopTrackingPoll();
+        return;
+      }
+      trackData = {
+        order_id: order.id,
+        driver_name: order.driver_name,
+        driver_phone: order.driver_phone,
+        customer_name: order.customer_name,
+        address: order.address,
+        ordered_at: order.created_at || order.orderedAt || null,
+        items: Array.isArray(order.items) ? order.items : [],
+        latitude: null,
+        longitude: null,
+        speed_kmh: 0,
+        heading: 0,
+        status: order.status,
+        updated_at: order.created_at
+      };
     }
-    
-    // Determine status color and icon
-    const statusColors = {
-      'Confirmed': 'var(--accent)',
-      'Preparing': 'orange',
-      'On the way': 'blue',
-      'Delivered': 'green'
-    };
-    const statusIcons = {
-      'Confirmed': '✅',
-      'Preparing': '🍳',
-      'On the way': '🚗',
-      'Delivered': '🎉'
-    };
-    const statusColor = statusColors[order.status] || 'var(--accent)';
-    const statusIcon = statusIcons[order.status] || '📦';
-    
-    // Build driver info if available
-    const driverInfo = order.driver_name ? `
-      <div style="margin-top:1rem; padding:1rem; background:blue; border-radius:8px; color:white;">
-        <div style="font-size:0.9rem; font-weight:600;">🚗 Your Delivery Driver</div>
-        <div style="font-size:1.1rem; margin-top:0.3rem;">${order.driver_name}</div>
-        <div style="font-size:0.85rem; opacity:0.9;">📱 ${order.driver_phone || 'N/A'}</div>
-        <div style="font-size:0.75rem; opacity:0.8; margin-top:0.5rem;">Call driver when arriving</div>
-      </div>
-    ` : '';
-    
-    result.innerHTML = `
-      <div class="track-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-          <strong style="font-size:1.2rem;">📦 Order #${order.id}</strong>
-          <span style="padding:0.3rem 0.8rem; border-radius:20px; font-size:0.8rem; background:${statusColor}; color:white; font-weight:600;">${statusIcon} ${order.status}</span>
-        </div>
-        <div style="font-size:0.85rem; color:var(--muted); margin-bottom:0.8rem;">
-          <div><strong>Customer:</strong> ${order.customer_name || 'N/A'}</div>
-          <div><strong>Total:</strong> GH₵${parseFloat(order.total || 0).toFixed(2)}</div>
-          <div><strong>Ordered:</strong> ${order.created_at || 'N/A'}</div>
-        </div>
-        <div style="padding:0.8rem; background:var(--bg); border-radius:8px; font-size:0.85rem;">
-          <div style="margin-bottom:0.5rem;"><strong>📍 Delivery Address:</strong></div>
-          <div>${order.address || 'N/A'}</div>
-        </div>
-        ${driverInfo}
-        <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border);">
-          <div style="font-size:0.8rem; color:var(--muted); margin-bottom:0.5rem;">Delivery Progress:</div>
-          <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.75rem;">
-            <span style="color:${order.status !== 'Confirmed' ? 'green' : 'var(--muted)'}">✅ Confirmed</span>
-            <span style="flex:1; height:2px; background:${order.status !== 'Confirmed' ? 'green' : 'var(--border)'};"></span>
-            <span style="color:${order.status === 'Preparing' || order.status === 'On the way' || order.status === 'Delivered' ? 'green' : 'var(--muted)'}">🍳 Preparing</span>
-            <span style="flex:1; height:2px; background:${order.status === 'On the way' || order.status === 'Delivered' ? 'green' : 'var(--border)'};"></span>
-            <span style="color:${order.status === 'On the way' || order.status === 'Delivered' ? 'blue' : 'var(--muted)'}">🚗 On the way</span>
-            <span style="flex:1; height:2px; background:${order.status === 'Delivered' ? 'green' : 'var(--border)'};"></span>
-            <span style="color:${order.status === 'Delivered' ? 'green' : 'var(--muted)'}">🎉 Delivered</span>
-          </div>
-        </div>
-      </div>`;
-    
+
+    recordTrackedOrder(trackData);
+    renderTrackingResult(trackData);
+
   } catch (error) {
     console.error('Error tracking order:', error);
-    result.innerHTML = `<p style="color:var(--error); font-size:0.85rem;">❌ Error loading order. Try again later.</p>`;
+    result.innerHTML = `<div class="track-error">❌ Error loading order. Is the backend running?</div>`;
   }
 }
 
-function trackOrderById(orderId, fromModal = false) {
-  if (fromModal) {
-    const result = document.getElementById('trackResult');
-    if (!result) return;
-    
-    document.getElementById('trackInput').value = orderId;
-    trackOrder();
-  } else {
-    showModal('trackModal');
-    document.getElementById('trackInput').value = orderId;
-    trackOrder();
+function renderTrackingResult(data) {
+  const result = document.getElementById('trackResult');
+  if (!result) return;
+
+  const statusColors = { 'Confirmed':'var(--accent)', 'Preparing':'#f59e0b', 'On the way':'#3b82f6', 'Delivered':'#22c55e' };
+  const statusIcons  = { 'Confirmed':'✅', 'Preparing':'🍳', 'On the way':'🚗', 'Delivered':'🎉' };
+  const statusColor  = statusColors[data.status] || 'var(--accent)';
+  const statusIcon   = statusIcons[data.status]  || '📦';
+
+  const steps = ['Confirmed','Preparing','On the way','Delivered'];
+  const stepIdx = steps.indexOf(data.status);
+
+  result.innerHTML = `
+    <div class="track-card">
+      <div class="track-card-header">
+        <strong>📦 Order #${data.order_id}</strong>
+        <span class="track-status-badge" style="background:${statusColor};">${statusIcon} ${data.status}</span>
+      </div>
+      <div class="track-info-grid">
+        <div><span class="track-label">Customer</span><span class="track-value">${data.customer_name || 'N/A'}</span></div>
+        <div><span class="track-label">Address</span><span class="track-value">📍 ${data.address || 'N/A'}</span></div>
+        <div><span class="track-label">Ordered</span><span class="track-value">${formatOrderDate(data.ordered_at)}</span></div>
+        <div><span class="track-label">Items</span><span class="track-value">${formatOrderItems(data.items)}</span></div>
+      </div>
+      <div class="track-progress">
+        ${steps.map((s, i) => `
+          <div class="track-step ${i <= stepIdx ? 'done' : ''} ${i === stepIdx ? 'active' : ''}">
+            <div class="track-step-dot">${i < stepIdx ? '✓' : statusIcons[s] || '●'}</div>
+            <div class="track-step-label">${s}</div>
+          </div>
+          ${i < steps.length - 1 ? `<div class="track-step-line ${i < stepIdx ? 'done' : ''}"></div>` : ''}
+        `).join('')}
+      </div>
+      ${data.driver_name ? `
+        <div class="track-driver-info">
+          <div class="track-driver-icon">🚗</div>
+          <div>
+            <div class="track-driver-name">${data.driver_name}</div>
+            <div class="track-driver-phone">📱 <a href="tel:${data.driver_phone}" style="color:inherit;">${data.driver_phone || 'N/A'}</a></div>
+          </div>
+          ${data.latitude ? `<div class="track-driver-speed">${data.speed_kmh > 0 ? Math.round(data.speed_kmh) + ' km/h' : 'Stopped'}</div>` : ''}
+        </div>
+      ` : '<div class="track-no-driver">Driver not yet assigned</div>'}
+      ${data.updated_at ? `<div class="track-updated">Last updated: ${new Date(data.updated_at).toLocaleTimeString()}</div>` : ''}
+    </div>`;
+  result.innerHTML += renderTrackedHistoryHtml();
+
+  // Show live map if GPS data is available
+  const mapContainer = document.getElementById('liveMapContainer');
+  if (data.latitude && data.longitude && mapContainer) {
+    mapContainer.style.display = 'block';
+
+    // Update OpenStreetMap iframe
+    const lat = data.latitude;
+    const lng = data.longitude;
+    const zoom = 15;
+    const osmSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.01},${lat-0.01},${lng+0.01},${lat+0.01}&layer=mapnik&marker=${lat},${lng}`;
+    const osmMap = document.getElementById('osmMap');
+    if (osmMap && osmMap.src !== osmSrc) osmMap.src = osmSrc;
+
+    // Update driver card
+    document.getElementById('driverCardName').textContent  = '🚗 ' + (data.driver_name || 'Driver');
+    document.getElementById('driverCardPhone').textContent = '📱 ' + (data.driver_phone || 'N/A');
+    document.getElementById('driverCardSpeed').textContent = data.speed_kmh > 0
+      ? `🏎️ ${Math.round(data.speed_kmh)} km/h`
+      : '🅿️ Stopped';
+    document.getElementById('driverCardEta').textContent   = data.status === 'Delivered' ? '✅ Delivered' : '🕐 En route';
+    document.getElementById('liveMapTitle').textContent    = 'Live Driver Location';
+    document.getElementById('liveMapUpdated').textContent  = 'Updated ' + new Date().toLocaleTimeString();
+  } else if (mapContainer) {
+    mapContainer.style.display = 'none';
+  }
+
+  // Stop polling if delivered
+  if (data.status === 'Delivered') {
+    stopTrackingPoll();
   }
 }
+
+function trackOrderById(orderId) {
+  showModal('trackModal');
+  const input = document.getElementById('trackInput');
+  if (input) {
+    // Extract numeric ID from QB-XXXXXXX format or use as-is
+    const numId = String(normalizeOrderId(orderId) || '').replace(/[^0-9]/g, '');
+    input.value = numId || orderId;
+  }
+  trackOrder();
+}
+
+function normalizeOrderId(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const cleaned = String(value || '').replace(/[^0-9]/g, '');
+  return cleaned ? parseInt(cleaned, 10) : 0;
+}
+
+function findOrderById(orderId) {
+  const target = normalizeOrderId(orderId);
+  return orders.find(o => normalizeOrderId(o.id) === target);
+}
+
+function formatOrderDate(dateValue) {
+  if (!dateValue) return 'N/A';
+  const d = new Date(dateValue);
+  if (isNaN(d.getTime())) return String(dateValue);
+  return d.toLocaleString();
+}
+
+function formatOrderItems(items) {
+  if (!Array.isArray(items) || items.length === 0) return 'No item data';
+  return items.map(i => `${i.emoji || ''} ${i.name || 'Item'} x${i.qty || i.quantity || 1}`).join(' · ');
+}
+
+function recordTrackedOrder(trackData) {
+  if (!trackData || !trackData.order_id) return;
+  const normalizedId = normalizeOrderId(trackData.order_id);
+  if (!normalizedId) return;
+
+  const historyEntry = {
+    order_id: normalizedId,
+    ordered_at: trackData.ordered_at || trackData.created_at || null,
+    tracked_at: new Date().toISOString(),
+    status: trackData.status || 'Confirmed',
+    items: Array.isArray(trackData.items) ? trackData.items : []
+  };
+
+  const existingIdx = trackedOrdersHistory.findIndex(h => normalizeOrderId(h.order_id) === normalizedId);
+  if (existingIdx >= 0) trackedOrdersHistory.splice(existingIdx, 1);
+  trackedOrdersHistory.unshift(historyEntry);
+  trackedOrdersHistory = trackedOrdersHistory.slice(0, 12);
+  saveState();
+}
+
+function renderTrackedHistoryHtml() {
+  if (!Array.isArray(trackedOrdersHistory) || trackedOrdersHistory.length === 0) return '';
+  return `
+    <div class="track-card" style="margin-top:0.9rem;">
+      <div class="track-card-header">
+        <strong>🕘 Previous Tracked IDs</strong>
+      </div>
+      ${trackedOrdersHistory.map(h => `
+        <div style="padding:0.55rem 0; border-top:1px solid var(--border); font-size:0.84rem;">
+          <div><strong>#${h.order_id}</strong> · ${h.status || 'Confirmed'}</div>
+          <div style="color:var(--muted);">Bought: ${formatOrderDate(h.ordered_at)}</div>
+          <div style="color:var(--muted);">Items: ${formatOrderItems(h.items)}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// =============================================
+// DRIVER LOCATION SHARING
+// =============================================
+let driverSharingInterval = null;
+let driverWatchId = null;
+
+function startDriverSharing() {
+  const driverName = document.getElementById('driverShareName').value.trim();
+  const orderId    = parseInt(document.getElementById('driverShareOrderId').value.trim());
+  const statusEl   = document.getElementById('driverShareStatus');
+  const btn        = document.getElementById('driverShareBtn');
+
+  if (!driverName) { showToast('⚠️ Enter your name'); return; }
+  if (!orderId)    { showToast('⚠️ Enter the order ID'); return; }
+
+  if (!navigator.geolocation) {
+    statusEl.innerHTML = `<div class="driver-share-error">❌ Your browser/device does not support GPS. Use a phone browser.</div>`;
+    return;
+  }
+
+  statusEl.innerHTML = `<div class="driver-share-loading">📡 Getting your GPS location...</div>`;
+  btn.disabled = true;
+  btn.textContent = '⏳ Sharing...';
+
+  let lastLat = null, lastLng = null;
+
+  function sendLocation(position) {
+    const lat     = position.coords.latitude;
+    const lng     = position.coords.longitude;
+    const speed   = position.coords.speed ? (position.coords.speed * 3.6) : 0; // m/s → km/h
+    const heading = position.coords.heading || 0;
+
+    lastLat = lat; lastLng = lng;
+
+    fetch(`${API_BASE}/tracking`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_id:    orderId,
+        driver_name: driverName,
+        latitude:    lat,
+        longitude:   lng,
+        speed_kmh:   Math.round(speed * 10) / 10,
+        heading:     Math.round(heading || 0)
+      })
+    }).then(res => {
+      if (res.ok) {
+        statusEl.innerHTML = `
+          <div class="driver-share-active">
+            <div class="live-dot" style="display:inline-block; margin-right:6px;"></div>
+            <strong>Sharing live location</strong><br/>
+            <small>📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}</small><br/>
+            <small>🏎️ ${Math.round(speed)} km/h · Order #${orderId}</small><br/>
+            <small style="color:var(--muted);">Updated ${new Date().toLocaleTimeString()}</small>
+          </div>`;
+      }
+    }).catch(() => {
+      statusEl.innerHTML = `<div class="driver-share-error">⚠️ Could not send location. Check backend connection.</div>`;
+    });
+  }
+
+  function onGpsError(err) {
+    statusEl.innerHTML = `<div class="driver-share-error">❌ GPS error: ${err.message}<br/><small>Make sure location is enabled on your device.</small></div>`;
+    btn.disabled = false;
+    btn.textContent = '📍 Start Sharing Location';
+  }
+
+  // Watch position continuously
+  driverWatchId = navigator.geolocation.watchPosition(sendLocation, onGpsError, {
+    enableHighAccuracy: true,
+    maximumAge: 3000,
+    timeout: 10000
+  });
+
+  // Also send every 5 seconds as backup
+  driverSharingInterval = setInterval(() => {
+    navigator.geolocation.getCurrentPosition(sendLocation, onGpsError, {
+      enableHighAccuracy: true,
+      maximumAge: 3000,
+      timeout: 8000
+    });
+  }, 5000);
+
+  // Change button to stop
+  btn.textContent = '🛑 Stop Sharing';
+  btn.onclick = stopDriverSharing;
+  btn.disabled = false;
+}
+
+function stopDriverSharing() {
+  if (driverSharingInterval) { clearInterval(driverSharingInterval); driverSharingInterval = null; }
+  if (driverWatchId !== null) { navigator.geolocation.clearWatch(driverWatchId); driverWatchId = null; }
+
+  const statusEl = document.getElementById('driverShareStatus');
+  const btn      = document.getElementById('driverShareBtn');
+  if (statusEl) statusEl.innerHTML = `<div style="color:var(--muted); font-size:0.85rem;">📴 Location sharing stopped.</div>`;
+  if (btn) {
+    btn.textContent = '📍 Start Sharing Location';
+    btn.onclick = startDriverSharing;
+    btn.disabled = false;
+  }
+  showToast('📴 Location sharing stopped');
+}
+
+// Alias for HTML button onclick="loadAllOrders()"
+function loadAllOrders() { loadAllOrdersAdmin(); }
 
 // ---------- REVIEW ----------
 function openReview(orderId) {
-  const order = orders.find(o => o.id === orderId);
+  const order = findOrderById(orderId);
   if (!order) return;
 
   reviewItemId = orderId;

@@ -8,6 +8,10 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import java.io.IOException;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class OrderRoutes implements HttpHandler {
 
@@ -23,6 +27,16 @@ public class OrderRoutes implements HttpHandler {
         Server.addCorsHeaders(exchange);
         String method = exchange.getRequestMethod();
         String path = exchange.getRequestURI().getPath();
+        String query = exchange.getRequestURI().getQuery();
+
+        // GET /api/orders/history?email=X - Returns all orders for a user with items and tracking status
+        if (method.equalsIgnoreCase("GET") && path.contains("/history")) {
+            String email = query != null ? extractEmailFromQuery(query) : "";
+            if (!email.isEmpty()) {
+                getOrderHistory(exchange, email);
+                return;
+            }
+        }
 
         if (method.equalsIgnoreCase("PUT") && path.matches(".*/api/orders/\\d+/driver.*")) {
             int orderId = extractOrderId(path);
@@ -43,6 +57,17 @@ public class OrderRoutes implements HttpHandler {
         } else {
             Server.sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
         }
+    }
+
+    private String extractEmailFromQuery(String query) {
+        if (query == null) return "";
+        for (String part : query.split("&")) {
+            String[] kv = part.split("=");
+            if (kv.length == 2 && kv[0].equals("email")) {
+                return java.net.URLDecoder.decode(kv[1], java.nio.charset.StandardCharsets.UTF_8);
+            }
+        }
+        return "";
     }
 
     private int extractOrderId(String path) {
@@ -92,8 +117,9 @@ public class OrderRoutes implements HttpHandler {
                     try { driverName = rs.getString("driver_name"); } catch (Exception e) { driverName = ""; }
                     try { driverPhone = rs.getString("driver_phone"); } catch (Exception e) { driverPhone = ""; }
                 }
+                int orderId = rs.getInt("id");
                 json.append("{")
-                    .append("\"id\":").append(rs.getInt("id")).append(",")
+                    .append("\"id\":").append(orderId).append(",")
                     .append("\"customer_name\":\"").append(escapeJson(rs.getString("customer_name"))).append("\",")
                     .append("\"phone\":\"").append(escapeJson(rs.getString("phone"))).append("\",")
                     .append("\"address\":\"").append(escapeJson(rs.getString("address"))).append("\",")
@@ -101,7 +127,8 @@ public class OrderRoutes implements HttpHandler {
                     .append("\"status\":\"").append(escapeJson(rs.getString("status"))).append("\",")
                     .append("\"driver_name\":\"").append(escapeJson(driverName)).append("\",")
                     .append("\"driver_phone\":\"").append(escapeJson(driverPhone)).append("\",")
-                    .append("\"created_at\":\"").append(rs.getString("created_at")).append("\"")
+                    .append("\"created_at\":\"").append(rs.getString("created_at")).append("\",")
+                    .append("\"items\":").append(getOrderItemsJson(conn, orderId))
                     .append("}");
                 first = false;
             }
@@ -112,6 +139,70 @@ public class OrderRoutes implements HttpHandler {
         } catch (SQLException e) {
             System.out.println("❌ Error fetching orders: " + e.getMessage());
             Server.sendResponse(exchange, 500, "{\"error\":\"Failed to fetch orders\"}");
+        }
+    }
+
+    // ---- GET ORDER HISTORY FOR A CUSTOMER ----
+    // GET /api/orders/history?email=X - Returns all orders for a user with items and tracking status
+    private void getOrderHistory(HttpExchange exchange, String email) throws IOException {
+        Connection conn = DatabaseConnection.getConnection();
+        if (conn == null) {
+            Server.sendResponse(exchange, 500, "{\"error\":\"Database not connected\"}");
+            return;
+        }
+
+        try {
+            // Get all orders for this customer email
+            String sql = "SELECT * FROM orders WHERE customer_email = ? ORDER BY created_at DESC";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+
+            StringBuilder json = new StringBuilder("{\"email\":\"").append(escapeJson(email)).append("\",\"orders\":[");
+            boolean first = true;
+
+            while (rs.next()) {
+                if (!first) json.append(",");
+                int orderId = rs.getInt("id");
+                
+                // Get tracking info if available
+                String trackingSql = "SELECT latitude, longitude, speed_kmh, heading, updated_at FROM delivery_tracking WHERE order_id = ?";
+                PreparedStatement trackingStmt = conn.prepareStatement(trackingSql);
+                trackingStmt.setInt(1, orderId);
+                ResultSet trackingRs = trackingStmt.executeQuery();
+                
+                String trackingJson = "null";
+                if (trackingRs.next()) {
+                    trackingJson = "{\"latitude\":" + trackingRs.getDouble("latitude") 
+                        + ",\"longitude\":" + trackingRs.getDouble("longitude")
+                        + ",\"speed_kmh\":" + trackingRs.getDouble("speed_kmh")
+                        + ",\"heading\":" + trackingRs.getInt("heading")
+                        + ",\"updated_at\":\"" + trackingRs.getString("updated_at") + "\"}";
+                }
+                
+                json.append("{")
+                    .append("\"id\":").append(orderId).append(",")
+                    .append("\"customer_name\":\"").append(escapeJson(rs.getString("customer_name"))).append("\",")
+                    .append("\"customer_email\":\"").append(escapeJson(rs.getString("customer_email"))).append("\",")
+                    .append("\"phone\":\"").append(escapeJson(rs.getString("phone"))).append("\",")
+                    .append("\"address\":\"").append(escapeJson(rs.getString("address"))).append("\",")
+                    .append("\"total\":").append(rs.getDouble("total")).append(",")
+                    .append("\"status\":\"").append(escapeJson(rs.getString("status"))).append("\",")
+                    .append("\"driver_name\":\"").append(escapeJson(rs.getString("driver_name"))).append("\",")
+                    .append("\"driver_phone\":\"").append(escapeJson(rs.getString("driver_phone"))).append("\",")
+                    .append("\"created_at\":\"").append(rs.getString("created_at")).append("\",")
+                    .append("\"tracking\":").append(trackingJson).append(",")
+                    .append("\"items\":").append(getOrderItemsJson(conn, orderId))
+                    .append("}");
+                first = false;
+            }
+
+            json.append("]}");
+            Server.sendResponse(exchange, 200, json.toString());
+
+        } catch (SQLException e) {
+            System.out.println("❌ Error fetching order history: " + e.getMessage());
+            Server.sendResponse(exchange, 500, "{\"error\":\"Failed to fetch order history\"}");
         }
     }
 
@@ -126,28 +217,46 @@ public class OrderRoutes implements HttpHandler {
 
         try {
             String body = Server.readRequestBody(exchange);
-            String customerName = extractJsonValue(body, "customer_name");
-            double total = Double.parseDouble(extractJsonValue(body, "total"));
-            String phone = extractJsonValue(body, "phone");
-            String address = extractJsonValue(body, "address");
+            String customerName  = extractJsonValue(body, "customer_name");
+            String customerEmail = extractJsonValue(body, "customer_email");
+            double total         = Double.parseDouble(extractJsonValue(body, "total"));
+            String phone         = extractJsonValue(body, "phone");
+            String address       = extractJsonValue(body, "address");
+            ensureOrderItemsTable(conn);
 
-            String sql = "INSERT INTO orders (customer_name, phone, address, total, status) VALUES (?, ?, ?, ?, 'Confirmed')";
-            PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            stmt.setString(1, customerName);
-            stmt.setString(2, phone);
-            stmt.setString(3, address);
-            stmt.setDouble(4, total);
+            // Try inserting with customer_email column (may not exist on old DBs)
+            String sql;
+            PreparedStatement stmt;
+            try {
+                sql  = "INSERT INTO orders (customer_name, customer_email, phone, address, total, status) VALUES (?, ?, ?, ?, ?, 'Confirmed')";
+                stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+                stmt.setString(1, customerName);
+                stmt.setString(2, customerEmail.isEmpty() ? null : customerEmail);
+                stmt.setString(3, phone);
+                stmt.setString(4, address);
+                stmt.setDouble(5, total);
+            } catch (SQLException ex) {
+                // Fallback: column doesn't exist yet
+                sql  = "INSERT INTO orders (customer_name, phone, address, total, status) VALUES (?, ?, ?, ?, 'Confirmed')";
+                stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+                stmt.setString(1, customerName);
+                stmt.setString(2, phone);
+                stmt.setString(3, address);
+                stmt.setDouble(4, total);
+            }
             stmt.executeUpdate();
 
             ResultSet keys = stmt.getGeneratedKeys();
             int newId = 0;
             if (keys.next()) newId = keys.getInt(1);
+            insertOrderItems(conn, newId, body);
 
             System.out.println("===========================================");
             System.out.println("📦 NEW ORDER RECEIVED!");
             System.out.println("===========================================");
             System.out.println("Order ID: #" + newId);
             System.out.println("Customer: " + customerName);
+            System.out.println("Email: " + (customerEmail.isEmpty() ? "N/A" : customerEmail));
             System.out.println("Phone: " + phone);
             System.out.println("Address: " + address);
             System.out.println("Total: GH₵" + total);
@@ -205,6 +314,27 @@ public class OrderRoutes implements HttpHandler {
                 statusStmt.executeUpdate();
 
                 System.out.println("🚗 Driver assigned to Order #" + orderId + ": " + driverName + " (" + driverPhone + ")");
+
+                // Send "driver assigned" email to customer (async, non-blocking)
+                try {
+                    String emailSql = "SELECT customer_name, customer_email, address FROM orders WHERE id = ?";
+                    PreparedStatement emailStmt = conn.prepareStatement(emailSql);
+                    emailStmt.setInt(1, orderId);
+                    ResultSet emailRs = emailStmt.executeQuery();
+                    if (emailRs.next()) {
+                        final String custName  = emailRs.getString("customer_name");
+                        final String custEmail = emailRs.getString("customer_email");
+                        final String custAddr  = emailRs.getString("address");
+                        final String drName    = driverName;
+                        final String drPhone   = driverPhone;
+                        final int    oId       = orderId;
+                        new Thread(() -> EmailService.sendDriverAssignedEmail(
+                            custEmail, custName, oId, drName, drPhone, custAddr)).start();
+                    }
+                } catch (Exception emailEx) {
+                    System.out.println("⚠️ Could not send driver-assigned email: " + emailEx.getMessage());
+                }
+
                 Server.sendResponse(exchange, 200, "{\"message\":\"Driver assigned successfully\"}");
             } else {
                 Server.sendResponse(exchange, 404, "{\"error\":\"Order not found\"}");
@@ -237,6 +367,29 @@ public class OrderRoutes implements HttpHandler {
 
             if (rows > 0) {
                 System.out.println("📋 Order #" + orderId + " status updated to: " + newStatus);
+
+                // If delivered, send confirmation email to customer
+                if ("Delivered".equalsIgnoreCase(newStatus)) {
+                    try {
+                        String emailSql = "SELECT customer_name, customer_email, address, total, driver_name FROM orders WHERE id = ?";
+                        PreparedStatement emailStmt = conn.prepareStatement(emailSql);
+                        emailStmt.setInt(1, orderId);
+                        ResultSet emailRs = emailStmt.executeQuery();
+                        if (emailRs.next()) {
+                            final String custName  = emailRs.getString("customer_name");
+                            final String custEmail = emailRs.getString("customer_email");
+                            final String custAddr  = emailRs.getString("address");
+                            final double total     = emailRs.getDouble("total");
+                            final String drName    = emailRs.getString("driver_name");
+                            final int    oId       = orderId;
+                            new Thread(() -> EmailService.sendDeliveryConfirmation(
+                                custEmail, custName, oId, total, drName, custAddr)).start();
+                        }
+                    } catch (Exception emailEx) {
+                        System.out.println("⚠️ Could not send delivery email: " + emailEx.getMessage());
+                    }
+                }
+
                 Server.sendResponse(exchange, 200, "{\"message\":\"Status updated to " + newStatus + "\"}");
             } else {
                 Server.sendResponse(exchange, 404, "{\"error\":\"Order not found\"}");
@@ -269,5 +422,142 @@ public class OrderRoutes implements HttpHandler {
             return numStr.split(",")[0].split("}")[0].trim();
         }
         return json.substring(start, end);
+    }
+
+    private void ensureOrderItemsTable(Connection conn) {
+        try {
+            String createSql = "CREATE TABLE IF NOT EXISTS order_items (" +
+                "id INT AUTO_INCREMENT PRIMARY KEY," +
+                "order_id INT NOT NULL," +
+                "food_id INT NOT NULL," +
+                "quantity INT NOT NULL DEFAULT 1," +
+                "price DECIMAL(10,2) NOT NULL," +
+                "FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE," +
+                "FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE" +
+                ")";
+            conn.prepareStatement(createSql).execute();
+        } catch (SQLException e) {
+            System.out.println("⚠️ Could not ensure order_items table: " + e.getMessage());
+        }
+    }
+
+    private void insertOrderItems(Connection conn, int orderId, String body) {
+        List<OrderItemPayload> items = parseOrderItems(body);
+        if (items.isEmpty()) return;
+
+        String sql = "INSERT INTO order_items (order_id, food_id, quantity, price) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            int inserted = 0;
+            for (OrderItemPayload item : items) {
+                if (item.foodId <= 0 || item.quantity <= 0 || item.price < 0) continue;
+                stmt.setInt(1, orderId);
+                stmt.setInt(2, item.foodId);
+                stmt.setInt(3, item.quantity);
+                stmt.setDouble(4, item.price);
+                stmt.addBatch();
+                inserted++;
+            }
+            if (inserted > 0) {
+                stmt.executeBatch();
+                System.out.println("🧾 Saved " + inserted + " item(s) for Order #" + orderId);
+            }
+        } catch (SQLException e) {
+            System.out.println("⚠️ Could not save order items for Order #" + orderId + ": " + e.getMessage());
+        }
+    }
+
+    private List<OrderItemPayload> parseOrderItems(String body) {
+        List<OrderItemPayload> items = new ArrayList<>();
+        String itemsArray = extractJsonArray(body, "items");
+        if (itemsArray.isEmpty()) return items;
+
+        Matcher objectMatcher = Pattern.compile("\\{[^{}]*\\}").matcher(itemsArray);
+        while (objectMatcher.find()) {
+            String itemJson = objectMatcher.group();
+            int foodId = (int) parseJsonNumber(itemJson, "id");
+            int quantity = (int) parseJsonNumber(itemJson, "qty");
+            if (quantity <= 0) quantity = (int) parseJsonNumber(itemJson, "quantity");
+            double price = parseJsonNumber(itemJson, "price");
+            items.add(new OrderItemPayload(foodId, quantity <= 0 ? 1 : quantity, price));
+        }
+        return items;
+    }
+
+    private String extractJsonArray(String json, String key) {
+        String searchKey = "\"" + key + "\"";
+        int keyIndex = json.indexOf(searchKey);
+        if (keyIndex == -1) return "";
+        int colonIndex = json.indexOf(":", keyIndex);
+        if (colonIndex == -1) return "";
+        int start = json.indexOf("[", colonIndex);
+        if (start == -1) return "";
+
+        int depth = 0;
+        for (int i = start; i < json.length(); i++) {
+            char ch = json.charAt(i);
+            if (ch == '[') depth++;
+            if (ch == ']') {
+                depth--;
+                if (depth == 0) return json.substring(start, i + 1);
+            }
+        }
+        return "";
+    }
+
+    private double parseJsonNumber(String json, String key) {
+        String searchKey = "\"" + key + "\"";
+        int keyIndex = json.indexOf(searchKey);
+        if (keyIndex == -1) return 0.0;
+        int colonIndex = json.indexOf(":", keyIndex);
+        if (colonIndex == -1) return 0.0;
+        String rest = json.substring(colonIndex + 1).trim();
+        StringBuilder num = new StringBuilder();
+        for (char c : rest.toCharArray()) {
+            if (Character.isDigit(c) || c == '.' || c == '-') {
+                num.append(c);
+            } else if (num.length() > 0) {
+                break;
+            }
+        }
+        try { return Double.parseDouble(num.toString()); } catch (Exception e) { return 0.0; }
+    }
+
+    private String getOrderItemsJson(Connection conn, int orderId) {
+        String sql = "SELECT oi.food_id, oi.quantity, oi.price, f.name, f.emoji " +
+                     "FROM order_items oi LEFT JOIN foods f ON oi.food_id = f.id " +
+                     "WHERE oi.order_id = ? ORDER BY oi.id ASC";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, orderId);
+            ResultSet rs = stmt.executeQuery();
+            StringBuilder json = new StringBuilder("[");
+            boolean first = true;
+            while (rs.next()) {
+                if (!first) json.append(",");
+                json.append("{")
+                    .append("\"id\":").append(rs.getInt("food_id")).append(",")
+                    .append("\"name\":\"").append(escapeJson(rs.getString("name"))).append("\",")
+                    .append("\"emoji\":\"").append(escapeJson(rs.getString("emoji"))).append("\",")
+                    .append("\"qty\":").append(rs.getInt("quantity")).append(",")
+                    .append("\"price\":").append(rs.getDouble("price"))
+                    .append("}");
+                first = false;
+            }
+            json.append("]");
+            return json.toString();
+        } catch (SQLException e) {
+            return "[]";
+        }
+    }
+
+    private static class OrderItemPayload {
+        final int foodId;
+        final int quantity;
+        final double price;
+
+        OrderItemPayload(int foodId, int quantity, double price) {
+            this.foodId = foodId;
+            this.quantity = quantity;
+            this.price = price;
+        }
     }
 }

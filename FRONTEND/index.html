@@ -17,9 +17,11 @@
       <li><a href="#menu" onclick="scrollToSection('menu')">Menu</a></li>
       <li><a href="#orders" onclick="scrollToSection('orders')">My Orders</a></li>
       <li><a href="#" onclick="showModal('trackModal')">Track Order</a></li>
+      <li><a href="#" onclick="showModal('driverTrackModal')" title="For delivery drivers">🚗 Driver</a></li>
       <li><a href="#" onclick="showAdminLogin()">Admin</a></li>
     </ul>
     <div class="nav-right">
+      <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">☀️</button>
       <button class="wishlist-btn" onclick="toggleWishlist()" title="Favourites">
         ♡ <span id="wishlistCount">0</span>
       </button>
@@ -42,6 +44,7 @@
     <a href="#menu" onclick="closeMobileMenu()">Menu</a>
     <a href="#orders" onclick="closeMobileMenu()">My Orders</a>
     <a href="#" onclick="showModal('trackModal'); closeMobileMenu()">Track Order</a>
+    <a href="#" onclick="showModal('driverTrackModal'); closeMobileMenu()">🚗 Driver Mode</a>
   </div>
 
   <!-- ========== HERO SECTION ========== -->
@@ -228,6 +231,10 @@
             <input type="text" id="checkoutName" placeholder="John Mensah"/>
           </div>
           <div class="form-group">
+            <label>Email <span style="color:var(--muted);font-size:0.78rem;">(for delivery updates)</span></label>
+            <input type="email" id="checkoutEmail" placeholder="you@example.com"/>
+          </div>
+          <div class="form-group">
             <label>Phone Number</label>
             <input type="tel" id="checkoutPhone" placeholder="024 XXX XXXX"/>
           </div>
@@ -310,16 +317,62 @@
 
   <!-- ========== ORDER TRACKING MODAL ========== -->
   <div class="modal-overlay" id="trackModal" onclick="closeModalOutside(event, 'trackModal')">
-    <div class="modal">
-      <button class="modal-close" onclick="closeModal('trackModal')">✕</button>
+    <div class="modal modal-wide">
+      <button class="modal-close" onclick="closeModal('trackModal'); stopTrackingPoll()">✕</button>
       <h2>Track Your Order 📍</h2>
-      <p class="modal-sub">Enter your order ID to see live status</p>
-      <div class="form-group">
-        <label>Order ID</label>
-        <input type="text" id="trackInput" placeholder="e.g. QB-1234567890"/>
+      <p class="modal-sub">Enter your order ID to see live driver location</p>
+      <div style="display:flex; gap:0.5rem; align-items:flex-end;">
+        <div class="form-group" style="flex:1; margin-bottom:0;">
+          <label>Order ID (number only, e.g. 5)</label>
+          <input type="text" id="trackInput" placeholder="e.g. 5" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/>
+        </div>
+        <button class="btn-primary" onclick="trackOrder()" style="padding:0.75rem 1.2rem; white-space:nowrap;">🔍 Track</button>
       </div>
-      <button class="btn-primary full" onclick="trackOrder()">Track Order</button>
       <div id="trackResult" style="margin-top:1rem;"></div>
+
+      <!-- Real-time map area (shown when driver has GPS) -->
+      <div id="liveMapContainer" style="display:none; margin-top:1rem;">
+        <div class="live-map-header">
+          <span class="live-dot"></span>
+          <span id="liveMapTitle">Live Driver Location</span>
+          <span id="liveMapUpdated" style="font-size:0.75rem; color:var(--muted); margin-left:auto;"></span>
+        </div>
+        <!-- OpenStreetMap iframe embed (no API key needed) -->
+        <div id="mapFrame" class="map-frame">
+          <iframe id="osmMap" src="" frameborder="0" scrolling="no" marginheight="0" marginwidth="0"
+            style="width:100%; height:100%; border-radius:12px; border:none;"></iframe>
+        </div>
+        <div class="driver-location-card" id="driverLocationCard">
+          <div class="driver-avatar">🚗</div>
+          <div class="driver-details">
+            <div id="driverCardName" class="driver-card-name"></div>
+            <div id="driverCardPhone" class="driver-card-phone"></div>
+            <div id="driverCardSpeed" class="driver-card-speed"></div>
+          </div>
+          <div id="driverCardEta" class="driver-card-eta"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== DRIVER TRACKING PAGE (for drivers to share location) ========== -->
+  <div class="modal-overlay" id="driverTrackModal" onclick="closeModalOutside(event, 'driverTrackModal')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('driverTrackModal'); stopDriverSharing()">✕</button>
+      <h2>🚗 Driver Location Sharing</h2>
+      <p class="modal-sub">Share your live GPS location for your assigned order</p>
+      <div class="form-group">
+        <label>Your Name</label>
+        <input type="text" id="driverShareName" placeholder="e.g. Kofi Mensah"/>
+      </div>
+      <div class="form-group">
+        <label>Order ID you are delivering</label>
+        <input type="number" id="driverShareOrderId" placeholder="e.g. 5" min="1"/>
+      </div>
+      <button class="btn-primary full" id="driverShareBtn" onclick="startDriverSharing()">
+        📍 Start Sharing Location
+      </button>
+      <div id="driverShareStatus" style="margin-top:1rem; text-align:center;"></div>
     </div>
   </div>
 

@@ -30,10 +30,11 @@ public class Server {
             // ---- REGISTER ROUTES ----
             // Each context (path) is connected to a handler class
             // e.g. GET http://localhost:8080/api/foods → FoodRoutes handles it
-            server.createContext("/api/foods",  new FoodRoutes());
-            server.createContext("/api/orders", new OrderRoutes());
-            server.createContext("/api/users",  new UserRoutes());
-            server.createContext("/api/reviews", new ReviewRoutes());
+            server.createContext("/api/foods",    new FoodRoutes());
+            server.createContext("/api/orders",   new OrderRoutes());
+            server.createContext("/api/users",    new UserRoutes());
+            server.createContext("/api/reviews",  new ReviewRoutes());
+            server.createContext("/api/tracking", new TrackingRoutes());
 
             // A simple health-check route so we know the server is alive
             server.createContext("/api/health", (exchange) -> {
@@ -53,10 +54,14 @@ public class Server {
             System.out.println("   GET  http://localhost:" + PORT + "/api/health");
             System.out.println("   GET  http://localhost:" + PORT + "/api/foods");
             System.out.println("   POST http://localhost:" + PORT + "/api/orders");
+            System.out.println("   PUT  http://localhost:" + PORT + "/api/orders/{id}/status");
+            System.out.println("   PUT  http://localhost:" + PORT + "/api/orders/{id}/driver");
             System.out.println("   POST http://localhost:" + PORT + "/api/users/register");
             System.out.println("   POST http://localhost:" + PORT + "/api/users/login");
             System.out.println("   POST http://localhost:" + PORT + "/api/reviews");
             System.out.println("   GET  http://localhost:" + PORT + "/api/reviews");
+            System.out.println("   POST http://localhost:" + PORT + "/api/tracking  (driver posts GPS)");
+            System.out.println("   GET  http://localhost:" + PORT + "/api/tracking?order_id=X  (customer polls)");
             System.out.println("==========================================");
 
         } catch (IOException e) {

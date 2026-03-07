@@ -16,6 +16,7 @@ USE quickbite;
 -- Run these commands if you already have an orders table:
 -- ALTER TABLE orders ADD COLUMN driver_name VARCHAR(100);
 -- ALTER TABLE orders ADD COLUMN driver_phone VARCHAR(20);
+-- ALTER TABLE orders ADD COLUMN customer_email VARCHAR(150);
 -- =============================================
 
 -- =============================================
@@ -67,15 +68,50 @@ CREATE TABLE foods (
 -- Stores customer orders
 -- =============================================
 CREATE TABLE orders (
-    id            INT AUTO_INCREMENT PRIMARY KEY,
-    customer_name VARCHAR(100) NOT NULL,
-    phone         VARCHAR(20),
-    address       VARCHAR(255),
-    total         DECIMAL(10, 2) NOT NULL,
-    status        VARCHAR(50) DEFAULT 'Confirmed',   -- Confirmed, Preparing, On the way, Delivered
-    driver_name   VARCHAR(100),
-    driver_phone  VARCHAR(20),
-    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id             INT AUTO_INCREMENT PRIMARY KEY,
+    customer_name  VARCHAR(100) NOT NULL,
+    customer_email VARCHAR(150),
+    phone          VARCHAR(20),
+    address        VARCHAR(255),
+    total          DECIMAL(10, 2) NOT NULL,
+    status         VARCHAR(50) DEFAULT 'Confirmed',   -- Confirmed, Preparing, On the way, Delivered
+    driver_name    VARCHAR(100),
+    driver_phone   VARCHAR(20),
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- TABLE: delivery_tracking
+-- Stores real-time GPS location updates from drivers
+-- Driver's phone/app POSTs their location here every few seconds
+-- =============================================
+CREATE TABLE delivery_tracking (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    order_id   INT NOT NULL,
+    driver_name VARCHAR(100),
+    latitude   DECIMAL(10, 7) NOT NULL,
+    longitude  DECIMAL(10, 7) NOT NULL,
+    speed_kmh  DECIMAL(5, 1) DEFAULT 0,
+    heading    INT DEFAULT 0,              -- degrees 0-360
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+
+-- =============================================
+-- TABLE: tracking_history
+-- Stores every GPS update with timestamp for historical tracking
+-- Every driver location update is recorded here for order history
+-- =============================================
+CREATE TABLE IF NOT EXISTS tracking_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    driver_name VARCHAR(100),
+    latitude DECIMAL(10, 7) NOT NULL,
+    longitude DECIMAL(10, 7) NOT NULL,
+    speed_kmh DECIMAL(5, 1) DEFAULT 0,
+    heading INT DEFAULT 0,
+    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
 -- =============================================

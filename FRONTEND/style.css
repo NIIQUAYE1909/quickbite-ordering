@@ -3,7 +3,7 @@
    style.css — Full visual styling
    ============================================= */
 
-/* ---------- CSS VARIABLES ---------- */
+/* ---------- CSS VARIABLES — DARK MODE (default) ---------- */
 :root {
   --bg: #0a0a0a;
   --surface: #111111;
@@ -21,6 +21,98 @@
   --error: #ef4444;
   --radius: 16px;
   --shadow: 0 20px 50px rgba(0,0,0,0.6);
+  --navbar-bg: rgba(10,10,10,0.92);
+  --theme-toggle-bg: #1f1f1f;
+  --theme-toggle-icon: '☀️';
+}
+
+/* ---------- CSS VARIABLES — LIGHT MODE ---------- */
+body.light-mode {
+  --bg: #f5f3ef;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --card-hover: #f0ede8;
+  --accent: #ff5c1a;
+  --accent-hover: #e04a0a;
+  --accent2: #f59e0b;
+  --text: #1a1a1a;
+  --muted: #888;
+  --muted2: #aaa;
+  --border: #e0dbd4;
+  --border2: #d0cbc4;
+  --success: #16a34a;
+  --error: #dc2626;
+  --radius: 16px;
+  --shadow: 0 20px 50px rgba(0,0,0,0.12);
+  --navbar-bg: rgba(245,243,239,0.95);
+  --theme-toggle-bg: #e8e4df;
+  --theme-toggle-icon: '🌙';
+}
+
+/* Light mode specific overrides */
+body.light-mode body::before { opacity: 0.01; }
+
+body.light-mode .navbar {
+  background: var(--navbar-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+body.light-mode .hero {
+  background: linear-gradient(135deg, #fff8f4 0%, #fef3ec 50%, #fff5ee 100%);
+}
+
+body.light-mode .menu-card {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+body.light-mode .menu-card:hover {
+  box-shadow: 0 8px 32px rgba(255,92,26,0.15);
+}
+
+body.light-mode .cart-sidebar,
+body.light-mode .wishlist-sidebar {
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+}
+
+body.light-mode .modal {
+  background: var(--surface);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+body.light-mode .offer-card {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+body.light-mode footer {
+  background: #f0ede8;
+}
+
+body.light-mode .track-card {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+/* ---------- THEME TOGGLE BUTTON ---------- */
+.theme-toggle-btn {
+  background: var(--theme-toggle-bg);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.theme-toggle-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  transform: rotate(20deg) scale(1.1);
 }
 
 /* ---------- RESET & BASE ---------- */
@@ -37,6 +129,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   line-height: 1.6;
+  transition: background 0.35s ease, color 0.35s ease;
 }
 
 body::before {
@@ -63,11 +156,11 @@ body::before {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(10,10,10,0.92);
+  background: var(--navbar-bg, rgba(10,10,10,0.92));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
-  transition: padding 0.3s;
+  transition: padding 0.3s, background 0.3s;
 }
 
 .navbar.scrolled {
@@ -81,6 +174,7 @@ body::before {
   font-weight: 900;
   letter-spacing: -0.5px;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -574,6 +668,18 @@ body::before {
   position: relative;
 }
 
+.menu-card-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.menu-emoji-fallback {
+  font-size: 5rem;
+  line-height: 1;
+}
+
 .menu-badge {
   position: absolute;
   top: 10px; right: 10px;
@@ -602,6 +708,7 @@ body::before {
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 
@@ -611,6 +718,23 @@ body::before {
 .menu-card-body { padding: 1.1rem; }
 .menu-card-name { font-weight: 600; font-size: 0.97rem; margin-bottom: 0.3rem; }
 .menu-card-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; margin-bottom: 0.8rem; }
+
+.food-modal-photo {
+  width: 100%;
+  max-width: 520px;
+  height: 260px;
+  object-fit: cover;
+  border-radius: 14px;
+  margin: 0 auto 1rem;
+  display: block;
+  border: 1px solid var(--border);
+}
+
+.food-modal-emoji-fallback {
+  font-size: 5.5rem;
+  margin-bottom: 1rem;
+  line-height: 1;
+}
 
 .menu-card-footer {
   display: flex;
@@ -1381,3 +1505,295 @@ footer {
   .hero-stats { gap: 1.5rem; }
   .search-bar button { padding: 0.85rem 1rem; }
 }
+
+/* =============================================
+   DELIVERY TRACKING STYLES
+   ============================================= */
+
+/* ---- Live pulsing dot ---- */
+.live-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: #22c55e;
+  border-radius: 50%;
+  animation: livePulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes livePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.6); }
+  50%       { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+}
+
+/* ---- Track card ---- */
+.track-card {
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 1.2rem;
+  animation: fadeUp 0.3s ease;
+}
+
+.track-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.track-card-header strong { font-size: 1.1rem; }
+
+.track-status-badge {
+  padding: 0.3rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.02em;
+}
+
+.track-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.82rem;
+}
+
+.track-label { color: var(--muted); display: block; font-size: 0.75rem; margin-bottom: 0.1rem; }
+.track-value { color: var(--text); font-weight: 500; }
+
+/* ---- Progress steps ---- */
+.track-progress {
+  display: flex;
+  align-items: center;
+  margin: 1rem 0;
+  overflow-x: auto;
+  padding-bottom: 0.3rem;
+}
+
+.track-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.track-step-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--border2);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  transition: all 0.3s;
+  border: 2px solid var(--border);
+}
+
+.track-step.done .track-step-dot {
+  background: #22c55e;
+  color: white;
+  border-color: #22c55e;
+}
+
+.track-step.active .track-step-dot {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(255,92,26,0.2);
+  animation: livePulse 1.4s ease-in-out infinite;
+}
+
+.track-step-label {
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.track-step.done .track-step-label,
+.track-step.active .track-step-label { color: var(--text); }
+
+.track-step-line {
+  flex: 1;
+  height: 2px;
+  background: var(--border2);
+  min-width: 20px;
+  transition: background 0.3s;
+}
+
+.track-step-line.done { background: #22c55e; }
+
+/* ---- Driver info in track card ---- */
+.track-driver-info {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.25);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  margin-top: 0.8rem;
+}
+
+.track-driver-icon { font-size: 1.6rem; }
+
+.track-driver-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.track-driver-phone {
+  font-size: 0.82rem;
+  color: #60a5fa;
+  margin-top: 0.1rem;
+}
+
+.track-driver-speed {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--border2);
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+}
+
+.track-no-driver {
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: center;
+  padding: 0.6rem;
+  margin-top: 0.5rem;
+  border: 1px dashed var(--border2);
+  border-radius: 8px;
+}
+
+.track-updated {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: right;
+  margin-top: 0.6rem;
+}
+
+.track-error {
+  color: var(--error);
+  font-size: 0.85rem;
+  padding: 0.8rem;
+  background: rgba(239,68,68,0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(239,68,68,0.2);
+}
+
+/* ---- Live map container ---- */
+.live-map-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.6rem;
+}
+
+.map-frame {
+  width: 100%;
+  height: 260px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border2);
+  background: var(--card);
+}
+
+/* ---- Driver location card (below map) ---- */
+.driver-location-card {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  margin-top: 0.6rem;
+}
+
+.driver-avatar { font-size: 1.8rem; }
+
+.driver-details { flex: 1; }
+
+.driver-card-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.driver-card-phone {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.1rem;
+}
+
+.driver-card-speed {
+  font-size: 0.78rem;
+  color: var(--muted2);
+  margin-top: 0.1rem;
+}
+
+.driver-card-eta {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(255,92,26,0.1);
+  padding: 0.3rem 0.7rem;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+/* ---- Driver sharing status ---- */
+.driver-share-active {
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.3);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.driver-share-loading {
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.driver-share-error {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  font-size: 0.82rem;
+  color: var(--error);
+}
+
+/* ---- Admin tracking button in order list ---- */
+.track-live-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: 'DM Sans', sans-serif;
+  transition: background 0.2s;
+}
+
+.track-live-btn:hover { background: #2563eb; }
