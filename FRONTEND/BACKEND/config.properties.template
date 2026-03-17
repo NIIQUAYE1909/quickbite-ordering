@@ -1,0 +1,24 @@
+# =============================================
+# QuickBite - Configuration Template
+# Copy this file to config.properties and fill in your values
+# NEVER share config.properties or push it to GitHub!
+# =============================================
+
+# Database connection settings (XAMPP defaults)
+db.url=jdbc:mysql://localhost:3306/quickbite
+db.user=root
+db.password=
+
+# Server port
+server.port=8080
+
+# Admin settings
+admin.email=your-email@gmail.com
+
+# =============================================
+# EMAIL SETTINGS (for delivery notifications)
+# NOTE: Credentials are now hardcoded in EmailService.java
+# The FROM_PASSWORD constant in that file is what actually matters.
+# =============================================
+email.from=your-email@gmail.com
+email.password=your-gmail-app-password

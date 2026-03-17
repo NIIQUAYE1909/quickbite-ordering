@@ -4,26 +4,17 @@ Complete step-by-step guide to get QuickBite running on your machine.
 
 ---
 
-## 🚀 Quick Start (Already Running!)
+## 🚀 Quick Start (Run Everything in 3 Steps!)
 
-The application is currently **LIVE**:
+| Step | What to Do | Command / Action |
+|------|------------|-------------------|
+| 1 | Start XAMPP | Open XAMPP Control Panel → Start Apache & MySQL |
+| 2 | Setup Database | Go to `http://localhost/phpmyadmin` → Create database `quickbite` → Import `database.sql` |
+| 3 | Run Backend | Open terminal in `FRONTEND/BACKEND` → Run: `java -cp "src;lib/mysql-connector-j-9.6.0.jar;." Main` |
+| 4 | Run Frontend | Open `FRONTEND/index.html` with Live Server |
 
-| Service | URL | Status |
-|---------|-----|--------|
-| Backend API | http://localhost:8080 | ✅ Running |
-| Database | MySQL (XAMPP) | ✅ Connected |
-| Frontend | `FRONTEND/index.html` | Ready to open |
-
-**To test the API:**
-```
-curl http://localhost:8080/api/health
-curl http://localhost:8080/api/foods
-```
-
-**To stop the server:**
-```cmd
-taskkill /F /IM java.exe
-```
+**Backend runs on:** `http://localhost:8080`
+**Frontend runs on:** `http://localhost:5500`
 
 ---
 
@@ -36,7 +27,28 @@ taskkill /F /IM java.exe
 
 ---
 
-## Step 1 — Database Setup
+## Step 1 — Create config.properties
+
+Create a file named `config.properties` in the `FRONTEND/BACKEND/` folder with this content:
+
+```properties
+# QuickBite - Configuration
+
+# Database connection settings (XAMPP defaults)
+db.url=jdbc:mysql://localhost:3306/quickbite
+db.user=root
+db.password=
+
+# Server port
+server.port=8080
+
+# Admin settings
+admin.email=your-email@gmail.com
+```
+
+---
+
+## Step 2 — Database Setup
 
 1. Open **XAMPP Control Panel**
 2. Start **Apache** and **MySQL**
@@ -72,7 +84,7 @@ CREATE TABLE IF NOT EXISTS delivery_tracking (
 
 ---
 
-## Step 2 — Configure Email Notifications ⭐ NEW
+## Step 3 — Configure Email Notifications ⭐ NEW
 
 To send automatic emails to customers when their order is on the way or delivered:
 
@@ -97,7 +109,7 @@ To send automatic emails to customers when their order is on the way or delivere
 
 ---
 
-## Step 3 — Run the Backend
+## Step 4 — Run the Backend
 
 **The server is already running!** If you need to restart it:
 
@@ -134,7 +146,7 @@ Keep this terminal open while using the app.
 
 ---
 
-## Step 4 — Run the Frontend
+## Step 5 — Run the Frontend
 
 1. Open VS Code
 2. Open the `FRONTEND/` folder
