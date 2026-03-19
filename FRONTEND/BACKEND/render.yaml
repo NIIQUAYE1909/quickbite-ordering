@@ -1,0 +1,70 @@
+# =============================================
+# QuickBite - Render Deployment Configuration
+# =============================================
+# This file defines the services for deploying on Render.com
+# 
+# To deploy:
+# 1. Push your code to GitHub
+# 2. In Render dashboard, click "New +" → "Blueprint"
+# 3. Select this render.yaml file
+# =============================================
+
+services:
+  # =============================================
+  # Backend API Service (Java Spark)
+  # =============================================
+  - type: web
+    name: quickbite-backend
+    env: docker
+    # Use the Dockerfile in FRONTEND/BACKEND/
+    dockerfilePath: FRONTEND/BACKEND/Dockerfile
+    dockerContext: .
+    plan: free
+    autoDeploy: true
+    
+    # Environment variables for the backend
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: DB_URL
+        # This will be set by the database connection below
+        # Render automatically provides DATABASE_URL for MySQL
+        fromDatabase:
+          name: quickbite-db
+          property: mysql_url
+      - key: DB_USER
+        fromDatabase:
+          name: quickbite-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: quickbite-db
+          property: password
+    
+    # Health check - Render will check this endpoint
+    healthCheckPath: /api/health
+    
+    # Disconnected pull (if you don't want auto-deploy)
+    # pullRequestPreviewsEnabled: false
+
+  # =============================================
+  # MySQL Database
+  # =============================================
+  - type: mysql
+    name: quickbite-db
+    plan: free
+    mysqlVersion: "8.0"
+    # The database will be created automatically
+    # Connection info is passed to the backend via env vars
+
+  # =============================================
+  # Static Frontend (Optional - Serve from same domain)
+  # =============================================
+  # Note: For simplicity, you can also host the frontend 
+  # separately on Render as a static site, or use 
+  # the backend to serve static files.
+  # 
+  # To serve frontend from backend:
+  # 1. Build the frontend (or use index.html as-is)
+  # 2. The frontend at FRONTEND/index.html makes API calls 
+  #    to the backend URL

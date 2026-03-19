@@ -1,1 +1,1 @@
-web: java -cp "src:lib/mysql-connector-j-9.6.0.jar:." Main
+web: java -cp "out:lib/mysql-connector-j-9.6.0.jar" Main

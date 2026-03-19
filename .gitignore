@@ -1,6 +1,7 @@
 # Config files (may contain sensitive data)
 config.properties
-env.js
+# Note: env.js IS tracked - needed for production deployment
+# DO NOT add env.js here - it's needed for both dev and production
 *.properties
 
 # Compiled Java class files
