@@ -32,9 +32,16 @@ public class DatabaseConnection {
             
             // Fallback to environment variables (Render uses these)
             if (url == null || url.isEmpty()) {
-                url = System.getenv("db.url");
-                user = System.getenv("db.user");
-                password = System.getenv("db.password");
+                url = System.getenv("db.url") != null ? System.getenv("db.url") : System.getenv("DB_URL");
+                user = System.getenv("db.user") != null ? System.getenv("db.user") : System.getenv("DB_USER");
+                password = System.getenv("db.password") != null ? System.getenv("db.password") : System.getenv("DB_PASSWORD");
+                // Allow empty passwords if DB_PASSWORD is not set or empty (useful for local dev)
+                if (password == null) password = "";
+                
+                // Extra fallback for providers like Railway that set DATABASE_URL
+                if (System.getenv("DATABASE_URL") != null && url == null) {
+                    url = System.getenv("DATABASE_URL");
+                }
             }
 
             // Load the MySQL JDBC driver

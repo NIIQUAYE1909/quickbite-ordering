@@ -292,7 +292,7 @@ Full instructions in: FRONTEND/BACKEND/SETUP.md
 
 CONTACT
 ================================================================================
-Developer: Quayen (Nii Quay)
+Developer: Quaye (Nii Quaye Kingsley Asare)
 Email: quayen010@gmail.com
 Location: Sekondi-Takoradi, Ghana
 

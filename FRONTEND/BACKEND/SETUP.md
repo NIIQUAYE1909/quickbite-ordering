@@ -297,3 +297,7 @@ cd "c:\Users\HP\Downloads\FOOD ORDERING SYSTEM\FRONTEND\BACKEND" && java -cp "sr
 - [ ] Update `FRONTEND/env.js` with your backend URL
 - [ ] Deploy frontend on GitHub Pages or Netlify
 - [ ] Test your live app!
+
+// CODE FOR RUNNING THE BACKEND 
+
+cd "c:/Users/HP/Downloads/FOOD ORDERING SYSTEM/FRONTEND/BACKEND"; java -cp "src;lib/mysql-connector-j-9.6.0.jar;." Main

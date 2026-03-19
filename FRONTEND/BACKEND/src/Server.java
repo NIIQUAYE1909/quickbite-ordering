@@ -20,7 +20,14 @@ public class Server {
 
     // The port our server listens on
     // Frontend will send requests to: http://localhost:8080/api/...
-    private static final int PORT = 8080;
+    private static int getPort() {
+        String envPort = System.getenv("PORT");
+        if (envPort != null && !envPort.isEmpty()) {
+            return Integer.parseInt(envPort);
+        }
+        return 8080;
+    }
+    private static final int PORT = getPort();
 
     public void start() {
         try {
