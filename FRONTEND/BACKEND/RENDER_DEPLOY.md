@@ -19,7 +19,7 @@ Make sure your code is pushed to a GitHub repository.
 1. Log in to [Render Dashboard](https://dashboard.render.com)
 2. Click **"New +"** and select **"Blueprint"**
 3. Connect your GitHub repository
-4. Select the `FRONTEND/BACKEND/render.yaml` file
+4. Select the `BACKEND/render.yaml` file
 5. Click **"Apply"**
 
 Render will automatically:
@@ -31,7 +31,7 @@ After deployment, connect to your Render MySQL database and run the schema:
 
 ```bash
 # Connect to your Render MySQL database using the credentials from Render dashboard
-mysql -h your-host -u your-user -p quickbite_db < FRONTEND/BACKEND/database.sql
+mysql -h your-host -u your-user -p quickbite_db < BACKEND/database.sql
 ```
 
 ---
@@ -53,7 +53,7 @@ If you prefer manual deployment:
 3. Configure:
    - **Name**: `quickbite-backend`
    - **Environment**: `Docker`
-   - **Dockerfile Path**: `FRONTEND/BACKEND/Dockerfile`
+   - **Dockerfile Path**: `BACKEND/Dockerfile`
    - **Docker Context**: `.`
 4. Add environment variables:
    - `PORT` = `8080`

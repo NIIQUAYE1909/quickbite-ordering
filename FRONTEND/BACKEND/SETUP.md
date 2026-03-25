@@ -10,7 +10,7 @@ Complete step-by-step guide to get QuickBite running on your machine.
 |------|------------|-------------------|
 | 1 | Start XAMPP | Open XAMPP Control Panel → Start Apache & MySQL |
 | 2 | Setup Database | Go to `http://localhost/phpmyadmin` → Create database `quickbite` → Import `database.sql` |
-| 3 | Run Backend | Open terminal in `FRONTEND/BACKEND` → Run: `java -cp "src;lib/mysql-connector-j-9.6.0.jar;." Main` |
+| 3 | Run Backend | Open terminal in `BACKEND` → Run: `java -cp "src;lib/mysql-connector-j-9.6.0.jar;." Main` |
 | 4 | Run Frontend | Open `FRONTEND/index.html` with Live Server |
 
 **Backend runs on:** `http://localhost:8080`
@@ -29,7 +29,7 @@ Complete step-by-step guide to get QuickBite running on your machine.
 
 ## Step 1 — Create config.properties
 
-Create a file named `config.properties` in the `FRONTEND/BACKEND/` folder with this content:
+Create a file named `config.properties` in the `BACKEND/` folder with this content:
 
 ```properties
 # QuickBite - Configuration
@@ -54,7 +54,7 @@ admin.email=your-email@gmail.com
 2. Start **Apache** and **MySQL**
 3. Open browser → go to `http://localhost/phpmyadmin`
 4. Click the **SQL** tab
-5. Copy & paste ALL content from `FRONTEND/BACKEND/database.sql`
+5. Copy & paste ALL content from `BACKEND/database.sql`
 6. Click **Go**
 
 This creates:
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS delivery_tracking (
 
 To send automatic emails to customers when their order is on the way or delivered:
 
-1. Open `FRONTEND/BACKEND/src/EmailService.java`
+1. Open `src/EmailService.java`
 2. Find this line near the top:
    ```java
    private static final String FROM_PASSWORD = "YOUR_GMAIL_APP_PASSWORD_HERE";
@@ -116,7 +116,7 @@ To send automatic emails to customers when their order is on the way or delivere
 Open a terminal (Command Prompt or VS Code terminal):
 
 ```cmd
-cd "c:\Users\HP\Downloads\FOOD ORDERING SYSTEM\FRONTEND\BACKEND"
+cd BACKEND
 
 REM Run the server (already compiled)
 java -cp "src;lib/mysql-connector-j-9.6.0.jar;." Main
@@ -199,7 +199,7 @@ Customers must provide their email at checkout (the Email field in the checkout 
 ## File Structure
 
 ```
-FRONTEND/BACKEND/
+BACKEND/
 ├── src/
 │   ├── Main.java                ← Entry point
 │   ├── Server.java              ← HTTP server & routes
@@ -227,7 +227,7 @@ FRONTEND/BACKEND/
 |-------|----------|
 | `MySQL Driver not found` | Make sure `mysql-connector-j-*.jar` is in the `lib/` folder |
 | `Database not connected` | Check XAMPP MySQL is running on port 3306 |
-| `config.properties not found` | Run the compile command from inside the `FRONTEND/BACKEND/` folder |
+| `config.properties not found` | Run the compile command from inside the `BACKEND/` folder |
 | `Port 8080 in use` | Stop any other Java processes, or change `PORT` in `Server.java` |
 | `Email not sending` | Check `FROM_PASSWORD` in `EmailService.java` is a valid Gmail App Password |
 | `GPS not working` | Driver must use HTTPS or localhost; allow location in browser settings |
@@ -239,7 +239,7 @@ FRONTEND/BACKEND/
 ## Quick Start Command (copy-paste)
 
 ```cmd
-cd "c:\Users\HP\Downloads\FOOD ORDERING SYSTEM\FRONTEND\BACKEND" && java -cp "src;lib/mysql-connector-j-9.6.0.jar;." Main
+cd BACKEND && java -cp "src;lib/mysql-connector-j-9.6.0.jar;." Main
 ```
 
 ---
@@ -300,4 +300,4 @@ cd "c:\Users\HP\Downloads\FOOD ORDERING SYSTEM\FRONTEND\BACKEND" && java -cp "sr
 
 // CODE FOR RUNNING THE BACKEND 
 
-cd "c:/Users/HP/Downloads/FOOD ORDERING SYSTEM/FRONTEND/BACKEND"; java -cp "src;lib/mysql-connector-j-9.6.0.jar;." Main
+cd BACKEND; java -cp "src;lib/mysql-connector-j-9.6.0.jar;." Main

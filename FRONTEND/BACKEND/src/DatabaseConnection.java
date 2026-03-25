@@ -74,9 +74,7 @@ public class DatabaseConnection {
         try {
             // Try multiple paths for config.properties
             String[] paths = {
-                "config.properties",
-                "BACKEND/config.properties",
-                "FRONTEND/BACKEND/config.properties"
+                "config.properties"
             };
             
             FileInputStream fis = null;

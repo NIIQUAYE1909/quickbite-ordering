@@ -149,7 +149,7 @@ public class EmailService {
             // JavaMail not available — print instructions
             System.out.println("📧 JavaMail not found. To enable emails:");
             System.out.println("   1. Download mail.jar from https://javaee.github.io/javamail/");
-            System.out.println("   2. Place it in FRONTEND/BACKEND/lib/");
+            System.out.println("   2. Place it in lib/");
             System.out.println("   3. Add it to your compile/run classpath");
             System.out.println("   Email that would have been sent to: " + toEmail);
             System.out.println("   Subject: " + subject);

@@ -31,7 +31,7 @@ FOOD ORDERING SYSTEM/
 │   ├── style.css                      ← All visual styling (dark + light mode)
 │   └── main.js                        ← All interactivity, API calls & logic
 │
-└── FRONTEND/BACKEND/                  ← Server-side Java code
+└── BACKEND/                  ← Server-side Java code
     ├── src/
     │   ├── Main.java                  ← Entry point (run this)
     │   ├── Server.java                ← HTTP server & route registration
@@ -57,12 +57,12 @@ FOOD ORDERING SYSTEM/
 2. Start **Apache** and **MySQL**
 3. Open browser → go to `http://localhost/phpmyadmin`
 4. Click the **SQL** tab
-5. Copy & paste everything from `FRONTEND/BACKEND/database.sql`
+5. Copy & paste everything from `BACKEND/database.sql`
 6. Click **Go** — this creates your database, tables, and sample food data
 
 ### Step 2 — Configure Email (Optional but Recommended)
 To receive delivery notification emails:
-1. Open `FRONTEND/BACKEND/src/EmailService.java`
+1. Open `src/EmailService.java`
 2. Find the line: `private static final String FROM_PASSWORD = "YOUR_GMAIL_APP_PASSWORD_HERE";`
 3. Replace with your Gmail App Password:
    - Go to [https://myaccount.google.com/security](https://myaccount.google.com/security)
@@ -82,7 +82,7 @@ To receive delivery notification emails:
 Open a terminal and run:
 
 ```cmd
-cd "c:\Users\HP\Downloads\FOOD ORDERING SYSTEM\FRONTEND\BACKEND"
+cd BACKEND
 
 REM Run the server (already compiled)
 java -cp "src;lib/mysql-connector-j-9.6.0.jar;." Main
