@@ -22,26 +22,31 @@ public class DatabaseConnection {
     // ---- CONNECT TO DATABASE ----
     public void connect() {
         try {
-            // First try to load from config.properties file
             Properties props = loadConfig();
-            
-            // Then check for environment variables (for production deployment)
-            String url = System.getProperty("db.url") != null ? System.getProperty("db.url") : props.getProperty("db.url");
-            String user = System.getProperty("db.user") != null ? System.getProperty("db.user") : props.getProperty("db.user");
-            String password = System.getProperty("db.password") != null ? System.getProperty("db.password") : props.getProperty("db.password");
-            
-            // Fallback to environment variables (Render uses these)
-            if (url == null || url.isEmpty()) {
-                url = System.getenv("db.url") != null ? System.getenv("db.url") : System.getenv("DB_URL");
-                user = System.getenv("db.user") != null ? System.getenv("db.user") : System.getenv("DB_USER");
-                password = System.getenv("db.password") != null ? System.getenv("db.password") : System.getenv("DB_PASSWORD");
-                // Allow empty passwords if DB_PASSWORD is not set or empty (useful for local dev)
-                if (password == null) password = "";
-                
-                // Extra fallback for providers like Railway that set DATABASE_URL
-                if (System.getenv("DATABASE_URL") != null && url == null) {
-                    url = System.getenv("DATABASE_URL");
-                }
+            String url = firstNonEmpty(
+                System.getenv("DB_URL"),
+                System.getenv("DATABASE_URL"),
+                System.getenv("db.url"),
+                System.getProperty("db.url"),
+                props.getProperty("db.url")
+            );
+            String user = firstNonEmpty(
+                System.getenv("DB_USER"),
+                System.getenv("db.user"),
+                System.getProperty("db.user"),
+                props.getProperty("db.user")
+            );
+            String password = firstNonEmpty(
+                System.getenv("DB_PASSWORD"),
+                System.getenv("db.password"),
+                System.getProperty("db.password"),
+                props.getProperty("db.password"),
+                ""
+            );
+
+            if (url == null || user == null) {
+                System.out.println("❌ Database settings are missing. Set DB_URL, DB_USER, and DB_PASSWORD for production.");
+                return;
             }
 
             // Load the MySQL JDBC driver
@@ -65,6 +70,15 @@ public class DatabaseConnection {
     // Other classes call this to get the connection and run queries
     public static Connection getConnection() {
         return connection;
+    }
+
+    private String firstNonEmpty(String... values) {
+        for (String value : values) {
+            if (value != null && !value.trim().isEmpty()) {
+                return value.trim();
+            }
+        }
+        return null;
     }
 
     // ---- LOAD CONFIG FILE ----
@@ -96,7 +110,7 @@ public class DatabaseConnection {
                     System.out.println("✅ Loaded config.properties from classpath");
                     return props;
                 }
-                System.out.println("❌ Could not find config.properties in any location");
+                System.out.println("⚠️  config.properties not found. Falling back to environment variables.");
                 return props;
             }
             

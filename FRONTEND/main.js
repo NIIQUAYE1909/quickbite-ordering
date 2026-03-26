@@ -674,8 +674,17 @@ function formatCard(input) {
   input.value = v.replace(/(.{4})/g, '$1 ').trim();
 }
 
-// API Base URL - uses environment variable or defaults to localhost
-const API_BASE = window.env && window.env.API_URL ? window.env.API_URL : 'http://localhost:8080/api';
+// API Base URL - runtime-configurable for hosted deployments, with a safe local fallback.
+const API_BASE = (() => {
+  const configured = window.env && typeof window.env.API_URL === 'string'
+    ? window.env.API_URL.trim().replace(/\/$/, '')
+    : '';
+
+  if (configured) return configured;
+
+  const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  return isLocalhost ? 'http://localhost:8080/api' : '/api';
+})();
 
 async function placeOrder() {
   // Validate fields

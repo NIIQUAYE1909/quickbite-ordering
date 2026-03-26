@@ -17,8 +17,7 @@ admin.email=your-email@gmail.com
 
 # =============================================
 # EMAIL SETTINGS (for delivery notifications)
-# NOTE: Credentials are now hardcoded in EmailService.java
-# The FROM_PASSWORD constant in that file is what actually matters.
+# Use EMAIL_FROM and EMAIL_PASSWORD env vars in production.
 # =============================================
 email.from=your-email@gmail.com
-email.password=your-gmail-app-password
+email.password=YOUR_GMAIL_APP_PASSWORD_HERE

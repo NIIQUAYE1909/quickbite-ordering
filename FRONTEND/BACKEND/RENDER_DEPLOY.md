@@ -1,141 +1,58 @@
-# QuickBite - Render Deployment Guide
+# QuickBite deployment guide
 
-This guide will help you deploy your QuickBite Food Ordering System to [Render.com](https://render.com).
+This project is set up for:
 
-## Prerequisites
+- Frontend: Vercel
+- Backend: Render free web service
+- Database: TiDB Cloud Starter
 
-- A [Render.com](https://render.com) account
-- A GitHub repository with your code
-- Java 17 (for local testing)
+## 1. Create the database
 
----
+Create a TiDB Cloud Starter cluster and collect:
 
-## Quick Deploy Option (Recommended)
+- `DB_URL`
+- `DB_USER`
+- `DB_PASSWORD`
 
-### Step 1: Push to GitHub
-Make sure your code is pushed to a GitHub repository.
+Use the JDBC connection string from TiDB Cloud. A typical format is:
 
-### Step 2: Create a Blueprint on Render
-1. Log in to [Render Dashboard](https://dashboard.render.com)
-2. Click **"New +"** and select **"Blueprint"**
-3. Connect your GitHub repository
-4. Select the `BACKEND/render.yaml` file
-5. Click **"Apply"**
-
-Render will automatically:
-- Create a MySQL database (`quickbite-db`)
-- Build and deploy the Java backend (`quickbite-backend`)
-
-### Step 3: Initialize the Database
-After deployment, connect to your Render MySQL database and run the schema:
-
-```bash
-# Connect to your Render MySQL database using the credentials from Render dashboard
-mysql -h your-host -u your-user -p quickbite_db < BACKEND/database.sql
+```text
+jdbc:mysql://gateway01.region.prod.aws.tidbcloud.com:4000/quickbite?sslMode=VERIFY_IDENTITY&enabledTLSProtocols=TLSv1.2
 ```
 
----
+After the cluster is ready, import [`database.sql`](C:/Users/HP/Downloads/FOOD%20ORDERING%20SYSTEM/FRONTEND/BACKEND/database.sql).
 
-## Manual Deploy Option
+## 2. Deploy the backend to Render
 
-If you prefer manual deployment:
+Render no longer gives this project a workable free MySQL path, so only deploy the backend there.
 
-### Step 1: Create a MySQL Database on Render
-1. Go to [Render Dashboard](https://dashboard.render.com)
-2. Click **"New +"** → **"MySQL"**
-3. Choose a name: `quickbite-db`
-4. Select **Free** plan
-5. Click **"Create Database"**
+Use the repo root [`render.yaml`](C:/Users/HP/Downloads/FOOD%20ORDERING%20SYSTEM/render.yaml) or create the web service manually with:
 
-### Step 2: Create a Web Service
-1. Click **"New +"** → **"Web Service"**
-2. Connect your GitHub repository
-3. Configure:
-   - **Name**: `quickbite-backend`
-   - **Environment**: `Docker`
-   - **Dockerfile Path**: `BACKEND/Dockerfile`
-   - **Docker Context**: `.`
-4. Add environment variables:
-   - `PORT` = `8080`
-   - `DB_URL` = (from your MySQL database connection string)
-   - `DB_USER` = (from your MySQL database)
-   - `DB_PASSWORD` = (from your MySQL database)
-5. Click **"Create Web Service"**
+- Root Directory: `FRONTEND/BACKEND`
+- Environment: `Docker`
+- Dockerfile Path: `./Dockerfile`
+- Health Check Path: `/api/health`
 
-### Step 3: Initialize the Database
-Run the SQL commands from `database.sql` on your Render MySQL.
+Set these environment variables in Render:
 
----
+- `DB_URL`
+- `DB_USER`
+- `DB_PASSWORD`
+- `EMAIL_FROM` optional
+- `EMAIL_PASSWORD` optional
 
-## Frontend Deployment
+## 3. Point Vercel at the backend
 
-You have two options for the frontend:
+Update [`env.js`](C:/Users/HP/Downloads/FOOD%20ORDERING%20SYSTEM/FRONTEND/env.js) so `API_URL` matches your Render URL:
 
-### Option A: Deploy as Static Site on Render
-1. Click **"New +"** → **"Static Site"**
-2. Connect your GitHub repository
-3. Set:
-   - **Build Command**: (leave empty)
-   - **Publish Directory**: `FRONTEND`
-4. Add environment variable:
-   - `API_URL` = `https://quickbite-backend.onrender.com/api`
-5. Click **"Create Static Site"**
+```js
+window.env = Object.assign({}, window.env, {
+  API_URL: 'https://your-render-service.onrender.com/api'
+});
+```
 
-### Option B: Use as-is (index.html loads locally)
-The `FRONTEND/env.js` automatically detects if it's running on Render and connects to the correct backend URL.
+Then redeploy Vercel.
 
----
+## 4. Important limitation
 
-## Environment Variables
-
-### Backend (Set in Render Dashboard)
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `PORT` | HTTP port (Render sets this) | `8080` |
-| `DB_URL` | MySQL connection URL | `mysql://user:pass@host:3306/db` |
-| `DB_USER` | Database username | `root` |
-| `DB_PASSWORD` | Database password | `your-password` |
-
-### Frontend (if using static site)
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `API_URL` | Backend API URL | `https://quickbite-backend.onrender.com/api` |
-
----
-
-## Testing Your Deployment
-
-1. **Backend Health Check**: Visit `https://quickbite-backend.onrender.com/api/health`
-2. **API Endpoints**:
-   - `https://quickbite-backend.onrender.com/api/foods`
-   - `https://quickbite-backend.onrender.com/api/orders`
-   - `https://quickbite-backend.onrender.com/api/users`
-
----
-
-## Troubleshooting
-
-### Database Connection Failed
-- Make sure your MySQL database is running on Render
-- Verify `DB_URL`, `DB_USER`, and `DB_PASSWORD` are correct
-- Check that the database schema was imported
-
-### Frontend Can't Connect to Backend
-- Ensure CORS is enabled (it is by default in `Server.java`)
-- Check that `env.js` has the correct `API_URL`
-- Verify the backend is responding at `/api/health`
-
-### Build Fails
-- Ensure Java 17 is available in the Docker container
-- Check that `lib/mysql-connector-j-9.6.0.jar` exists
-
----
-
-## Free Tier Limits
-
-Render's free tier has some limitations:
-- **Web Service**: Sleeps after 15 minutes of inactivity (takes ~30s to wake up)
-- **MySQL**: Free for 90 days, then expires (requires upgrade or recreation)
-- **Static Site**: Unlimited for personal projects
-
-For production, consider upgrading to a paid plan.
+Render free blocks outbound SMTP on standard SMTP ports, so Gmail SMTP notifications usually will not work there. The rest of the app will still work. If you want email in production later, switch to an HTTP email provider API.
