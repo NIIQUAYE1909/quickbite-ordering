@@ -30,7 +30,7 @@
       <li><a href="#orders" onclick="scrollToSection('orders')">My Orders</a></li>
       <li><a href="#" onclick="showModal('trackModal')">Track Order</a></li>
       <li><a href="#" onclick="showModal('driverTrackModal')" title="For delivery drivers">🚗 Driver</a></li>
-      <li><a href="#" onclick="showAdminLogin()">Admin</a></li>
+      <li class="admin-nav-link" style="display:none;"><a href="#" onclick="showAdminLogin()">Admin</a></li>
     </ul>
     <div class="nav-right">
       <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">☀️</button>
@@ -58,7 +58,7 @@
       <a href="#orders" onclick="closeMobileMenu()">My Orders</a>
       <a href="#" onclick="showModal('trackModal'); closeMobileMenu()">Track Order</a>
       <a href="#" onclick="showModal('driverTrackModal'); closeMobileMenu()">🚗 Driver Mode</a>
-      <a href="#" onclick="showAdminLogin(); closeMobileMenu()">Admin</a>
+      <a href="#" class="admin-nav-link" style="display:none;" onclick="showAdminLogin(); closeMobileMenu()">Admin</a>
     </div>
     <div class="mobile-drawer-actions">
       <button class="mobile-drawer-btn" type="button" onclick="toggleWishlist(); closeMobileMenu()">♡ Favourites</button>
@@ -225,7 +225,7 @@
   </section>
 
   <!-- ========== ADMIN PANEL ========== -->
-  <section class="orders-section" id="admin">
+  <section class="orders-section" id="admin" style="display:none;">
     <div class="section-header">
       <h2 class="section-title">Admin <span>Panel</span> 🔧</h2>
       <button class="btn-primary" onclick="loadAllOrders()">🔄 Refresh Orders</button>

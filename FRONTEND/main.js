@@ -164,8 +164,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateAuthUI();
   updateWishlistUI();
   enforceAuthState();
-  checkAdminLogin(); // Check admin login status
-  loadAllOrdersAdmin(); // Load admin orders
+  checkAdminLogin();
 
   // Navbar scroll shrink
   window.addEventListener('scroll', () => {
@@ -178,6 +177,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeAllModals();
       if (document.getElementById('cartSidebar').classList.contains('open')) toggleCart();
       if (document.getElementById('wishlistSidebar').classList.contains('open')) toggleWishlist();
+    }
+
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      showAdminLogin();
     }
   });
 
@@ -896,6 +900,19 @@ function clearOrders() {
 const ADMIN_PASSWORD = 'quickbite2025'; // Change this to your desired password
 let isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true';
 
+function syncAdminAccess() {
+  const adminSection = document.getElementById('admin');
+  const adminLinks = document.querySelectorAll('.admin-nav-link');
+
+  adminLinks.forEach((link) => {
+    link.style.display = isAdminLoggedIn ? '' : 'none';
+  });
+
+  if (adminSection) {
+    adminSection.style.display = isAdminLoggedIn ? '' : 'none';
+  }
+}
+
 function showAdminLogin() {
   if (isAdminLoggedIn) {
     scrollToSection('admin');
@@ -913,6 +930,9 @@ function verifyAdmin() {
     localStorage.setItem('qb_admin_logged_in', 'true');
     closeModal('adminLoginModal');
     errorEl.style.display = 'none';
+    document.getElementById('adminPassword').value = '';
+    syncAdminAccess();
+    loadAllOrdersAdmin();
     showToast('✅ Admin logged in successfully');
     scrollToSection('admin');
   } else {
@@ -924,12 +944,15 @@ function verifyAdmin() {
 function logoutAdmin() {
   isAdminLoggedIn = false;
   localStorage.removeItem('qb_admin_logged_in');
+  syncAdminAccess();
   showToast('👋 Admin logged out');
 }
 
 // Check admin login on page load
 function checkAdminLogin() {
   isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true';
+  syncAdminAccess();
+  if (isAdminLoggedIn) loadAllOrdersAdmin();
 }
 
 // ========== ADMIN PANEL FUNCTIONS ==========
@@ -938,6 +961,11 @@ async function loadAllOrdersAdmin() {
   const stats = document.getElementById('adminStats');
   
   if (!list) { showToast('Admin panel not found'); return; }
+  if (!isAdminLoggedIn) {
+    list.innerHTML = '<div class="empty-orders">Admin sign-in is required to view live orders and tracking.</div>';
+    if (stats) stats.innerHTML = '';
+    return;
+  }
   
   list.innerHTML = '<div class="empty-orders">Loading orders from database...</div>';
   
