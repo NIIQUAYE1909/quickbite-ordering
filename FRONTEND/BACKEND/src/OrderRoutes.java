@@ -247,20 +247,26 @@ public class OrderRoutes implements HttpHandler {
             boolean hasDriverColumns = hasColumn(meta, "orders", "driver_name")
                 && hasColumn(meta, "orders", "driver_phone");
 
-            StringBuilder columns = new StringBuilder("customer_name, phone, address, total, status");
-            StringBuilder values = new StringBuilder("?, ?, ?, ?, ?");
+            StringBuilder columns = new StringBuilder();
+            StringBuilder values = new StringBuilder();
             List<Object> params = new ArrayList<>();
+
+            columns.append("customer_name");
+            values.append("?");
             params.add(customerName);
+
+            if (hasCustomerEmail) {
+                columns.append(", customer_email");
+                values.append(", ?");
+                params.add(customerEmail.isEmpty() ? null : customerEmail);
+            }
+
+            columns.append(", phone, address, total, status");
+            values.append(", ?, ?, ?, ?");
             params.add(phone);
             params.add(address);
             params.add(total);
             params.add("Confirmed");
-
-            if (hasCustomerEmail) {
-                columns.insert("customer_name".length(), ", customer_email");
-                values.insert(1, "?, ");
-                params.add(1, customerEmail.isEmpty() ? null : customerEmail);
-            }
 
             if (hasDriverColumns) {
                 columns.append(", driver_name, driver_phone");
