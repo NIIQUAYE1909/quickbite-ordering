@@ -73,6 +73,27 @@ public class EmailService {
         sendEmail(toEmail, subject, body);
     }
 
+    public static void sendComplaintAlert(String adminEmail, String customerName,
+                                           String customerEmail, int complaintId,
+                                           int orderId, int foodId, String foodName,
+                                           String itemCode, String message) {
+        String toEmail = firstNonEmpty(
+            adminEmail,
+            System.getenv("ADMIN_EMAIL"),
+            System.getProperty("admin.email"),
+            fromEmail
+        );
+
+        if (!configured || toEmail == null || toEmail.isEmpty()) {
+            System.out.println("Complaint alert email skipped (not configured or no admin email for Complaint #" + complaintId + ")");
+            return;
+        }
+
+        String subject = "New QuickBite Complaint #" + complaintId + " for " + foodName;
+        String body = buildComplaintAlertEmailBody(customerName, customerEmail, complaintId, orderId, foodId, foodName, itemCode, message);
+        sendEmail(toEmail, subject, body);
+    }
+
     private static void sendEmail(String toEmail, String subject, String htmlBody) {
         try {
             Class<?> sessionClass = Class.forName("javax.mail.Session");
@@ -180,6 +201,36 @@ public class EmailService {
             + "</table>"
             + "</div>"
             + "<p style='color:#555;'>You can track your order in real time on the QuickBite website.</p>"
+            + "</div></div></body></html>";
+    }
+
+    private static String buildComplaintAlertEmailBody(String customerName, String customerEmail,
+                                                        int complaintId, int orderId, int foodId,
+                                                        String foodName, String itemCode, String message) {
+        return "<!DOCTYPE html><html><head><meta charset='UTF-8'/></head><body style='font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:20px;'>"
+            + "<div style='max-width:680px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);'>"
+            + "<div style='background:linear-gradient(135deg,#dc2626,#f97316);padding:30px;text-align:center;'>"
+            + "<h1 style='color:white;margin:0;font-size:2rem;'>New Customer Concern</h1>"
+            + "<p style='color:rgba(255,255,255,0.92);margin:8px 0 0;'>A customer just submitted a complaint.</p>"
+            + "</div>"
+            + "<div style='padding:30px;'>"
+            + "<div style='background:#fff7ed;border-radius:12px;padding:20px;margin:0 0 20px;border-left:4px solid #ea580c;'>"
+            + "<h3 style='margin:0 0 12px;color:#333;'>Complaint Details</h3>"
+            + "<table style='width:100%;border-collapse:collapse;'>"
+            + "<tr><td style='padding:6px 0;color:#666;'>Complaint ID</td><td style='padding:6px 0;font-weight:bold;color:#111827;'>#" + complaintId + "</td></tr>"
+            + "<tr><td style='padding:6px 0;color:#666;'>Order ID</td><td style='padding:6px 0;font-weight:bold;color:#111827;'>#" + orderId + "</td></tr>"
+            + "<tr><td style='padding:6px 0;color:#666;'>Food ID</td><td style='padding:6px 0;font-weight:bold;color:#111827;'>" + foodId + "</td></tr>"
+            + "<tr><td style='padding:6px 0;color:#666;'>Food Item</td><td style='padding:6px 0;font-weight:bold;color:#111827;'>" + escapeHtml(foodName) + "</td></tr>"
+            + "<tr><td style='padding:6px 0;color:#666;'>Reference Code</td><td style='padding:6px 0;font-weight:bold;color:#dc2626;'>" + escapeHtml(itemCode) + "</td></tr>"
+            + "<tr><td style='padding:6px 0;color:#666;'>Customer</td><td style='padding:6px 0;font-weight:bold;color:#111827;'>" + escapeHtml(customerName) + "</td></tr>"
+            + "<tr><td style='padding:6px 0;color:#666;'>Customer Email</td><td style='padding:6px 0;font-weight:bold;color:#111827;'>" + escapeHtml(customerEmail) + "</td></tr>"
+            + "</table>"
+            + "</div>"
+            + "<div style='background:#f9fafb;border-radius:12px;padding:20px;border:1px solid #e5e7eb;'>"
+            + "<h3 style='margin:0 0 10px;color:#333;'>Customer Message</h3>"
+            + "<p style='margin:0;color:#374151;line-height:1.65;white-space:pre-wrap;'>" + escapeHtml(message) + "</p>"
+            + "</div>"
+            + "<p style='color:#555;margin-top:20px;'>You can review and manage this complaint from the QuickBite admin panel.</p>"
             + "</div></div></body></html>";
     }
 

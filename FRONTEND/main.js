@@ -1767,9 +1767,13 @@ async function submitComplaint() {
 
 async function loadAllComplaintsAdmin() {
   const list = document.getElementById('adminComplaintsList');
+  const badge = document.getElementById('adminComplaintBadge');
+  const refreshBtn = document.getElementById('adminComplaintRefreshBtn');
   if (!list) return;
   if (!isAdminLoggedIn) {
     list.innerHTML = '<div class="empty-orders">Admin sign-in is required to view customer concerns.</div>';
+    if (badge) badge.style.display = 'none';
+    if (refreshBtn) refreshBtn.textContent = 'Refresh Concerns';
     return;
   }
 
@@ -1781,7 +1785,18 @@ async function loadAllComplaintsAdmin() {
 
     if (!Array.isArray(complaints) || complaints.length === 0) {
       list.innerHTML = '<div class="empty-orders">No customer concerns yet.</div>';
+      if (badge) badge.style.display = 'none';
+      if (refreshBtn) refreshBtn.textContent = 'Refresh Concerns';
       return;
+    }
+
+    const pendingCount = complaints.filter((complaint) => String(complaint.status || '').toLowerCase() !== 'resolved').length;
+    if (badge) {
+      badge.textContent = String(pendingCount);
+      badge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+    }
+    if (refreshBtn) {
+      refreshBtn.textContent = pendingCount > 0 ? `Refresh Concerns (${pendingCount} pending)` : 'Refresh Concerns';
     }
 
     list.innerHTML = complaints.map((complaint) => `
@@ -1804,6 +1819,8 @@ async function loadAllComplaintsAdmin() {
     `).join('');
   } catch (_) {
     list.innerHTML = '<div class="empty-orders">Unable to load customer concerns right now.</div>';
+    if (badge) badge.style.display = 'none';
+    if (refreshBtn) refreshBtn.textContent = 'Refresh Concerns';
   }
 }
 // ---------- MODAL HELPERS ----------

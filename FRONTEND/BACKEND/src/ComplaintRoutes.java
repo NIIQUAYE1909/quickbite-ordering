@@ -109,6 +109,27 @@ public class ComplaintRoutes implements HttpHandler {
             int newId = 0;
             if (keys.next()) newId = keys.getInt(1);
 
+            final int complaintId = newId;
+            final String finalCustomerName = !customerName.trim().isEmpty() ? customerName.trim() : lookup.customerName;
+            final String finalCustomerEmail = customerEmail.trim().toLowerCase();
+            final int finalOrderId = lookup.orderId;
+            final int finalFoodId = lookup.foodId;
+            final String finalFoodName = lookup.foodName;
+            final String finalItemCode = itemCode;
+            final String finalMessage = message.trim();
+
+            new Thread(() -> EmailService.sendComplaintAlert(
+                null,
+                finalCustomerName,
+                finalCustomerEmail,
+                complaintId,
+                finalOrderId,
+                finalFoodId,
+                finalFoodName,
+                finalItemCode,
+                finalMessage
+            )).start();
+
             String response = "{"
                 + "\"message\":\"Your concern has been submitted. We will review it shortly.\","
                 + "\"complaintId\":" + newId + ","

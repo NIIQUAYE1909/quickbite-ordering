@@ -235,8 +235,8 @@
       <div class="empty-orders">Loading orders...</div>
     </div>
     <div class="section-header" style="margin-top:2rem;">
-      <h2 class="section-title">Customer <span>Concerns</span></h2>
-      <button class="btn-outline" onclick="loadAllComplaintsAdmin()">Refresh Concerns</button>
+      <h2 class="section-title">Customer <span>Concerns</span> <span id="adminComplaintBadge" style="display:none; margin-left:0.5rem; font-size:0.75rem; padding:0.2rem 0.55rem; border-radius:999px; background:#ef4444; color:white; vertical-align:middle;">0</span></h2>
+      <button class="btn-outline" id="adminComplaintRefreshBtn" onclick="loadAllComplaintsAdmin()">Refresh Concerns</button>
     </div>
     <div class="orders-list" id="adminComplaintsList">
       <div class="empty-orders">No customer concerns yet.</div>
