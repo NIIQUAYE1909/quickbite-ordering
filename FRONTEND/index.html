@@ -521,6 +521,29 @@
     </div>
   </div>
 
+  <!-- ========== COMPLAINT/CONCERN MODAL ========== -->
+  <div class="modal-overlay" id="complaintModal" onclick="closeModalOutside(event, 'complaintModal')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('complaintModal')">✕</button>
+      <h2>📝 Submit a Concern</h2>
+      <p class="modal-sub">Let us know about any issues with your order.</p>
+      <div class="form-group">
+        <label>Order ID</label>
+        <input type="number" id="complaintOrderId" placeholder="Enter your order ID"/>
+      </div>
+      <div class="form-group">
+        <label>Your Email</label>
+        <input type="email" id="complaintEmail" placeholder="your@email.com"/>
+      </div>
+      <div class="form-group">
+        <label>Your Concern</label>
+        <textarea id="complaintMessage" rows="4" placeholder="Describe your issue..."></textarea>
+      </div>
+      <p class="auth-feedback" id="complaintFeedback"></p>
+      <button class="btn-primary full" onclick="submitComplaint()">Submit Concern</button>
+    </div>
+  </div>
+
   <!-- ========== TOAST NOTIFICATION ========== -->
   <div class="toast" id="toast"></div>
 
@@ -546,7 +569,7 @@
       </div>
       <div class="footer-links">
         <h5>Support</h5>
-        <a href="#">Help Center</a>
+        <a href="#" onclick="showModal('complaintModal')">Submit Concern</a>
         <a href="#">Contact Us</a>
         <a href="#">Refund Policy</a>
         <a href="#">Privacy Policy</a>

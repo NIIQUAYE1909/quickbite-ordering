@@ -40,6 +40,7 @@ public class Server {
             server.createContext("/api/foods",    new FoodRoutes());
             server.createContext("/api/orders",   new OrderRoutes());
             server.createContext("/api/users",    new UserRoutes());
+            server.createContext("/api/complaints", new ComplaintRoutes());
             server.createContext("/api/reviews",  new ReviewRoutes());
             server.createContext("/api/tracking", new TrackingRoutes());
 

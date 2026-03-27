@@ -910,8 +910,30 @@ function showAdminLogin() {
   }
 }
 
+// Admin credentials - set your own secure password here
+const ADMIN_PASSWORD = "admin123"; // Change this to your desired admin password
+let isAdminLoggedIn = localStorage.getItem("adminLoggedIn") === "true";
+
+function showAdminLogin() {
+  showModal('adminLoginModal');
+}
+
 function verifyAdmin() {
   const password = document.getElementById('adminPassword').value;
+  const errorEl = document.getElementById('adminLoginError');
+  
+  if (password === ADMIN_PASSWORD) {
+    isAdminLoggedIn = true;
+    localStorage.setItem("adminLoggedIn", "true");
+    closeModal('adminLoginModal');
+    errorEl.style.display = 'none';
+    showToast('✅ Admin logged in successfully');
+    showAdminPanel();
+  } else {
+    errorEl.style.display = 'block';
+    document.getElementById('adminPassword').value = '';
+  }
+}
   const errorMsg = document.getElementById('adminLoginError');
   
   if (password === ADMIN_PASSWORD) {

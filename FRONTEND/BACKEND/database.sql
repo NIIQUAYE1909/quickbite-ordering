@@ -20,6 +20,20 @@ USE quickbite;
 -- =============================================
 
 -- =============================================
+-- TABLE: complaints
+-- Stores customer concerns/issues for admin review
+-- =============================================
+CREATE TABLE IF NOT EXISTS complaints (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    order_id    INT,
+    customer_name VARCHAR(100),
+    customer_email VARCHAR(150),
+    message     TEXT NOT NULL,
+    status      VARCHAR(20) DEFAULT 'pending',  -- pending, reviewed, resolved
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
 -- TABLE: reviews
 -- Stores customer reviews (goes to admin first, then published)
 -- =============================================
