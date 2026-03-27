@@ -410,14 +410,43 @@ public class OrderRoutes implements HttpHandler {
         int keyIndex = json.indexOf(searchKey);
         if (keyIndex == -1) return "";
         int colonIndex = json.indexOf(":", keyIndex);
-        int start = json.indexOf("\"", colonIndex + 1) + 1;
-        int end = json.indexOf("\"", start);
-        if (start == 0 || start < colonIndex) {
-            String numStr = json.substring(colonIndex + 1).replaceAll("[^0-9.\\-]", "");
-            if (numStr.isEmpty()) return "";
-            return numStr.split(",")[0].split("}")[0].trim();
+        if (colonIndex == -1) return "";
+
+        int valueStart = colonIndex + 1;
+        while (valueStart < json.length() && Character.isWhitespace(json.charAt(valueStart))) {
+            valueStart++;
         }
-        return json.substring(start, end);
+        if (valueStart >= json.length()) return "";
+
+        if (json.charAt(valueStart) == '"') {
+            StringBuilder value = new StringBuilder();
+            boolean escaped = false;
+            for (int i = valueStart + 1; i < json.length(); i++) {
+                char current = json.charAt(i);
+                if (escaped) {
+                    value.append(current);
+                    escaped = false;
+                    continue;
+                }
+                if (current == '\\') {
+                    escaped = true;
+                    continue;
+                }
+                if (current == '"') {
+                    return value.toString();
+                }
+                value.append(current);
+            }
+            return value.toString();
+        }
+
+        int valueEnd = valueStart;
+        while (valueEnd < json.length()) {
+            char current = json.charAt(valueEnd);
+            if (current == ',' || current == '}' || current == ']') break;
+            valueEnd++;
+        }
+        return json.substring(valueStart, valueEnd).trim();
     }
 
     private void ensureOrderItemsTable(Connection conn) {
