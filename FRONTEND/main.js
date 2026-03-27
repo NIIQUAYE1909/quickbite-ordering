@@ -232,22 +232,12 @@ async function loadFoods() {
     renderMenu(menuData);
   } catch (error) {
     console.warn('Failed to load foods from backend:', error);
-    renderMenuUnavailable();
-    
-    showToast('Menu is unavailable right now. Please try again shortly.');
+    menuData.forEach((item) => {
+      if (!item.imageUrl) item.imageUrl = getFoodImageForItem(item);
+    });
+    renderMenu(menuData);
+    showToast('Backend menu is unavailable. Showing backup menu.');
   }
-}
-
-function renderMenuUnavailable() {
-  const menuGrid = document.getElementById('menuGrid');
-  const menuCount = document.getElementById('menuCount');
-  if (menuGrid) {
-    menuGrid.innerHTML = `
-      <div class="empty-orders" style="grid-column:1 / -1;">
-        Menu is currently unavailable. Please wait a moment and refresh.
-      </div>`;
-  }
-  if (menuCount) menuCount.textContent = '0 items available';
 }
 
 function getFoodImageForItem(item) {
