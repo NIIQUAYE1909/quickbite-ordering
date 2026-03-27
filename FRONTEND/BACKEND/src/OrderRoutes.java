@@ -242,57 +242,7 @@ public class OrderRoutes implements HttpHandler {
             ensureDriverColumns(conn);
 
             DriverAssignment autoDriver = generateDriverAssignment(customerName, phone, address);
-            DatabaseMetaData meta = conn.getMetaData();
-            boolean hasCustomerEmail = hasColumn(meta, "orders", "customer_email");
-            boolean hasDriverColumns = hasColumn(meta, "orders", "driver_name")
-                && hasColumn(meta, "orders", "driver_phone");
-
-            StringBuilder columns = new StringBuilder();
-            StringBuilder values = new StringBuilder();
-            List<Object> params = new ArrayList<>();
-
-            columns.append("customer_name");
-            values.append("?");
-            params.add(customerName);
-
-            if (hasCustomerEmail) {
-                columns.append(", customer_email");
-                values.append(", ?");
-                params.add(customerEmail.isEmpty() ? null : customerEmail);
-            }
-
-            columns.append(", phone, address, total, status");
-            values.append(", ?, ?, ?, ?");
-            params.add(phone);
-            params.add(address);
-            params.add(total);
-            params.add("Confirmed");
-
-            if (hasDriverColumns) {
-                columns.append(", driver_name, driver_phone");
-                values.append(", ?, ?");
-                params.add(autoDriver.name);
-                params.add(autoDriver.phone);
-            }
-
-            String sql = "INSERT INTO orders (" + columns + ") VALUES (" + values + ")";
-            PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            for (int i = 0; i < params.size(); i++) {
-                Object param = params.get(i);
-                int parameterIndex = i + 1;
-                if (param == null) {
-                    stmt.setNull(parameterIndex, Types.VARCHAR);
-                } else if (param instanceof Double) {
-                    stmt.setDouble(parameterIndex, (Double) param);
-                } else {
-                    stmt.setString(parameterIndex, String.valueOf(param));
-                }
-            }
-            stmt.executeUpdate();
-
-            ResultSet keys = stmt.getGeneratedKeys();
-            int newId = 0;
-            if (keys.next()) newId = keys.getInt(1);
+            int newId = insertOrder(conn, customerName, customerEmail, phone, address, total, autoDriver);
 
             insertOrderItems(conn, newId, body);
 
@@ -531,6 +481,79 @@ public class OrderRoutes implements HttpHandler {
         );
     }
 
+    private int insertOrder(
+        Connection conn,
+        String customerName,
+        String customerEmail,
+        String phone,
+        String address,
+        double total,
+        DriverAssignment autoDriver
+    ) throws SQLException {
+        SQLException lastError = null;
+        String normalizedEmail = customerEmail == null || customerEmail.trim().isEmpty() ? null : customerEmail.trim();
+
+        OrderInsertAttempt[] attempts = new OrderInsertAttempt[] {
+            new OrderInsertAttempt(
+                "INSERT INTO orders (customer_name, customer_email, phone, address, total, status, driver_name, driver_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                new Object[] { customerName, normalizedEmail, phone, address, total, "Confirmed", autoDriver.name, autoDriver.phone }
+            ),
+            new OrderInsertAttempt(
+                "INSERT INTO orders (customer_name, customer_email, phone, address, total, status) VALUES (?, ?, ?, ?, ?, ?)",
+                new Object[] { customerName, normalizedEmail, phone, address, total, "Confirmed" }
+            ),
+            new OrderInsertAttempt(
+                "INSERT INTO orders (customer_name, phone, address, total, status, driver_name, driver_phone) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                new Object[] { customerName, phone, address, total, "Confirmed", autoDriver.name, autoDriver.phone }
+            ),
+            new OrderInsertAttempt(
+                "INSERT INTO orders (customer_name, phone, address, total, status) VALUES (?, ?, ?, ?, ?)",
+                new Object[] { customerName, phone, address, total, "Confirmed" }
+            )
+        };
+
+        for (OrderInsertAttempt attempt : attempts) {
+            try (PreparedStatement stmt = conn.prepareStatement(attempt.sql, Statement.RETURN_GENERATED_KEYS)) {
+                bindOrderInsertParams(stmt, attempt.params);
+                int rows = stmt.executeUpdate();
+                if (rows <= 0) continue;
+
+                try (ResultSet keys = stmt.getGeneratedKeys()) {
+                    if (keys.next()) {
+                        return keys.getInt(1);
+                    }
+                }
+
+                try (PreparedStatement fallbackStmt = conn.prepareStatement("SELECT LAST_INSERT_ID()");
+                     ResultSet rs = fallbackStmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getInt(1);
+                    }
+                }
+                throw new SQLException("Order insert succeeded but no generated key was returned.");
+            } catch (SQLException e) {
+                lastError = e;
+                System.out.println("Order insert attempt failed: " + e.getMessage());
+            }
+        }
+
+        throw lastError != null ? lastError : new SQLException("No compatible orders insert statement was found.");
+    }
+
+    private void bindOrderInsertParams(PreparedStatement stmt, Object[] params) throws SQLException {
+        for (int i = 0; i < params.length; i++) {
+            Object param = params[i];
+            int parameterIndex = i + 1;
+            if (param == null) {
+                stmt.setNull(parameterIndex, Types.VARCHAR);
+            } else if (param instanceof Double) {
+                stmt.setDouble(parameterIndex, (Double) param);
+            } else {
+                stmt.setString(parameterIndex, String.valueOf(param));
+            }
+        }
+    }
+
     private void insertOrderItems(Connection conn, int orderId, String body) {
         List<OrderItemPayload> items = parseOrderItems(body);
         if (items.isEmpty()) return;
@@ -683,6 +706,16 @@ public class OrderRoutes implements HttpHandler {
             this.foodId = foodId;
             this.quantity = quantity;
             this.price = price;
+        }
+    }
+
+    private static class OrderInsertAttempt {
+        final String sql;
+        final Object[] params;
+
+        OrderInsertAttempt(String sql, Object[] params) {
+            this.sql = sql;
+            this.params = params;
         }
     }
 
