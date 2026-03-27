@@ -117,6 +117,7 @@ let currentRating = 0;
 let reviewItemId = null;
 let deliveryFee = 5;
 let trackedOrdersHistory = [];
+let pendingComplaints = [];
 
 const PASSWORD_RULES = {
   minLength: 8,
@@ -285,6 +286,7 @@ function saveState() {
     localStorage.setItem('qb_orders', JSON.stringify(orders));
     localStorage.setItem('qb_user', JSON.stringify(currentUser));
     localStorage.setItem('qb_track_history', JSON.stringify(trackedOrdersHistory));
+    localStorage.setItem('qb_pending_complaints', JSON.stringify(pendingComplaints));
   } catch (e) {}
 }
 
@@ -295,9 +297,10 @@ function loadState() {
     orders    = JSON.parse(localStorage.getItem('qb_orders'))   || [];
     currentUser = JSON.parse(localStorage.getItem('qb_user'))   || null;
     trackedOrdersHistory = JSON.parse(localStorage.getItem('qb_track_history')) || [];
+    pendingComplaints = JSON.parse(localStorage.getItem('qb_pending_complaints')) || [];
     updateCartUI();
   } catch (e) {
-    cart = []; wishlist = []; orders = []; currentUser = null; trackedOrdersHistory = [];
+    cart = []; wishlist = []; orders = []; currentUser = null; trackedOrdersHistory = []; pendingComplaints = [];
   }
 }
 
@@ -811,7 +814,19 @@ async function placeOrder() {
     orderData.driver_phone = result.driver_phone || '';
     if (Array.isArray(result.items) && result.items.length) orderData.items = result.items;
   } catch (_) {
-    showToast('Unable to reach the server to place your order.');
+    orderData.status = 'Pending Sync';
+    orderData.sync_status = 'offline';
+    orderData.orderedAt = new Date().toISOString();
+    orders.unshift(orderData);
+    saveState();
+    cart = [];
+    activePromo = null;
+    deliveryFee = 5;
+    updateCartUI();
+    closeModal('checkoutModal');
+    renderOrders();
+    scrollToSection('orders');
+    showToast('Server is unavailable. Your order was saved on this device as Pending Sync.');
     return;
   }
 
@@ -868,7 +883,7 @@ function renderOrders() {
   list.innerHTML = orders.map(order => {
     const statusClass = {
       'Confirmed': '', 'Preparing': 'preparing', 'On the way': 'transit',
-      'Delivered': '', 'Cancelled': 'pending'
+      'Pending Sync': 'pending', 'Delivered': '', 'Cancelled': 'pending'
     }[order.status] || '';
     const itemSummary = Array.isArray(order.items)
       ? order.items.map(i => {
@@ -885,6 +900,7 @@ function renderOrders() {
         <strong>Order ${order.id}</strong>
         <span>${order.items.map(i => `${i.emoji || ''} ${i.name} ×${i.qty}`).join(' · ')}</span><br/>
         <span style="margin-top:0.15rem; display:block;">${order.time || formatOrderDate(order.orderedAt)}</span>
+        ${order.sync_status === 'offline' ? `<span style="margin-top:0.2rem; display:block; color:var(--accent2); font-size:0.8rem;">Saved offline on this device. Backend sync is still pending.</span>` : ''}
       </div>
       <div class="order-right">
         <div class="price">GH₵ ${order.grandTotal.toFixed(2)}</div>
@@ -1177,6 +1193,17 @@ async function fetchAndRenderTracking(orderId) {
 
   } catch (error) {
     console.error('Error tracking order:', error);
+    const snapshot = getTrackedOrderSnapshot(orderId);
+    if (snapshot) {
+      renderTrackingResult({
+        ...snapshot,
+        order_id: snapshot.order_id,
+        tracking_points: [],
+        fallback_notice: true
+      });
+      result.innerHTML += `<div class="track-no-driver" style="margin-top:0.8rem;">Showing the last saved tracking snapshot from this device while live tracking is unavailable.</div>`;
+      return;
+    }
     result.innerHTML = `<div class="track-error">❌ Unable to load live tracking right now. Please try again shortly.</div>`;
   }
 }
@@ -1305,7 +1332,16 @@ function recordTrackedOrder(trackData) {
     ordered_at: trackData.ordered_at || trackData.created_at || null,
     tracked_at: new Date().toISOString(),
     status: trackData.status || 'Confirmed',
-    items: Array.isArray(trackData.items) ? trackData.items : []
+    items: Array.isArray(trackData.items) ? trackData.items : [],
+    driver_name: trackData.driver_name || '',
+    driver_phone: trackData.driver_phone || '',
+    customer_name: trackData.customer_name || '',
+    address: trackData.address || '',
+    latitude: trackData.latitude ?? null,
+    longitude: trackData.longitude ?? null,
+    speed_kmh: trackData.speed_kmh ?? 0,
+    heading: trackData.heading ?? 0,
+    updated_at: trackData.updated_at || null
   };
 
   const existingIdx = trackedOrdersHistory.findIndex(h => normalizeOrderId(h.order_id) === normalizedId);
@@ -1313,6 +1349,11 @@ function recordTrackedOrder(trackData) {
   trackedOrdersHistory.unshift(historyEntry);
   trackedOrdersHistory = trackedOrdersHistory.slice(0, 12);
   saveState();
+}
+
+function getTrackedOrderSnapshot(orderId) {
+  const normalizedId = normalizeOrderId(orderId);
+  return trackedOrdersHistory.find((entry) => normalizeOrderId(entry.order_id) === normalizedId) || null;
 }
 
 function renderTrackedHistoryHtml() {
@@ -1760,7 +1801,19 @@ async function submitComplaint() {
     document.getElementById('complaintItemCode').value = '';
     document.getElementById('complaintMessage').value = '';
   } catch (_) {
-    setAuthFeedback('complaintFeedback', 'Unable to submit your concern right now.', true);
+    pendingComplaints.unshift({
+      id: `LOCAL-${Date.now()}`,
+      item_code: itemCode,
+      customer_email: email,
+      customer_name: currentUser?.name || '',
+      message,
+      status: 'Pending Sync',
+      created_at: new Date().toISOString()
+    });
+    pendingComplaints = pendingComplaints.slice(0, 20);
+    saveState();
+    setAuthFeedback('complaintFeedback', `Server unavailable. Your concern was saved on this device with code ${itemCode} and marked Pending Sync.`, false);
+    showToast(`Concern saved locally. Ref ${itemCode}`);
   }
 }
 
@@ -1781,15 +1834,17 @@ async function loadAllComplaintsAdmin() {
   try {
     const response = await fetch(`${API_BASE}/complaints`);
     const complaints = await response.json();
+    const localDrafts = pendingComplaints.map((complaint) => ({ ...complaint, local_only: true }));
+    const mergedComplaints = Array.isArray(complaints) ? [...localDrafts, ...complaints] : localDrafts;
 
-    if (!Array.isArray(complaints) || complaints.length === 0) {
+    if (mergedComplaints.length === 0) {
       list.innerHTML = '<div class="empty-orders">No customer concerns yet.</div>';
       if (badge) badge.style.display = 'none';
       if (refreshBtn) refreshBtn.textContent = 'Refresh Concerns';
       return;
     }
 
-    const pendingCount = complaints.filter((complaint) => String(complaint.status || '').toLowerCase() !== 'resolved').length;
+    const pendingCount = mergedComplaints.filter((complaint) => String(complaint.status || '').toLowerCase() !== 'resolved').length;
     if (badge) {
       badge.textContent = String(pendingCount);
       badge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
@@ -1798,12 +1853,12 @@ async function loadAllComplaintsAdmin() {
       refreshBtn.textContent = pendingCount > 0 ? `Refresh Concerns (${pendingCount} pending)` : 'Refresh Concerns';
     }
 
-    list.innerHTML = complaints.map((complaint) => `
+    list.innerHTML = mergedComplaints.map((complaint) => `
       <div class="order-card" style="flex-direction:column; gap:0.6rem;">
         <div style="display:flex; justify-content:space-between; gap:0.75rem; flex-wrap:wrap;">
           <div>
             <strong>Concern #${complaint.id}</strong>
-            <div style="color:var(--muted); font-size:0.88rem; margin-top:0.25rem;">${complaint.food_name || 'Food item'} · Ref ${complaint.item_code || 'N/A'}</div>
+            <div style="color:var(--muted); font-size:0.88rem; margin-top:0.25rem;">${complaint.food_name || 'Food item'} · Ref ${complaint.item_code || 'N/A'}${complaint.local_only ? ' · Local Draft' : ''}</div>
           </div>
           <div class="order-status ${complaint.status === 'resolved' ? '' : 'pending'}">${complaint.status || 'pending'}</div>
         </div>
@@ -1817,6 +1872,30 @@ async function loadAllComplaintsAdmin() {
       </div>
     `).join('');
   } catch (_) {
+    if (pendingComplaints.length > 0) {
+      if (badge) {
+        badge.textContent = String(pendingComplaints.length);
+        badge.style.display = 'inline-block';
+      }
+      if (refreshBtn) refreshBtn.textContent = `Refresh Concerns (${pendingComplaints.length} local)`;
+      list.innerHTML = pendingComplaints.map((complaint) => `
+        <div class="order-card" style="flex-direction:column; gap:0.6rem;">
+          <div style="display:flex; justify-content:space-between; gap:0.75rem; flex-wrap:wrap;">
+            <div>
+              <strong>Concern #${complaint.id}</strong>
+              <div style="color:var(--muted); font-size:0.88rem; margin-top:0.25rem;">Ref ${complaint.item_code || 'N/A'} · Local Draft</div>
+            </div>
+            <div class="order-status pending">${complaint.status || 'Pending Sync'}</div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.5rem; color:var(--muted); font-size:0.9rem;">
+            <div><strong>User:</strong> ${complaint.customer_name || 'N/A'}</div>
+            <div><strong>Email:</strong> ${complaint.customer_email || 'N/A'}</div>
+          </div>
+          <div style="padding:0.75rem; background:var(--bg); border-radius:10px;">${complaint.message || ''}</div>
+        </div>
+      `).join('');
+      return;
+    }
     list.innerHTML = '<div class="empty-orders">Unable to load customer concerns right now.</div>';
     if (badge) badge.style.display = 'none';
     if (refreshBtn) refreshBtn.textContent = 'Refresh Concerns';
