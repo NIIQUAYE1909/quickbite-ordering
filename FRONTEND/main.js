@@ -1097,46 +1097,35 @@ async function fetchAndRenderTracking(orderId) {
   if (!result) return;
 
   try {
-    // Try real-time tracking endpoint first
-    let trackData = null;
-    try {
-      const trackRes = await fetch(`${API_BASE}/tracking?order_id=${orderId}`);
-      if (trackRes.ok) trackData = await trackRes.json();
-    } catch (_) {}
+    const trackRes = await fetch(`${API_BASE}/tracking?order_id=${orderId}`);
 
-    // Fallback: fetch from orders list
-    if (!trackData) {
-      const ordersRes = await fetch(`${API_BASE}/orders`);
-      const dbOrders  = await ordersRes.json();
-      const order     = dbOrders.find(o => o.id === orderId);
-      if (!order) {
-        result.innerHTML = `<div class="track-error">❌ Order #${orderId} not found. Check the ID and try again.</div>`;
-        stopTrackingPoll();
-        return;
-      }
-      trackData = {
-        order_id: order.id,
-        driver_name: order.driver_name,
-        driver_phone: order.driver_phone,
-        customer_name: order.customer_name,
-        address: order.address,
-        ordered_at: order.created_at || order.orderedAt || null,
-        items: Array.isArray(order.items) ? order.items : [],
-        latitude: null,
-        longitude: null,
-        speed_kmh: 0,
-        heading: 0,
-        status: order.status,
-        updated_at: order.created_at
-      };
+    if (trackRes.status === 404) {
+      result.innerHTML = `<div class="track-error">❌ Order #${orderId} was not found. Check the ID and try again.</div>`;
+      stopTrackingPoll();
+      return;
     }
+
+    if (!trackRes.ok) {
+      const errorPayload = await trackRes.json().catch(() => ({}));
+      throw new Error(errorPayload.error || `Tracking request failed with ${trackRes.status}`);
+    }
+
+    const trackData = await trackRes.json();
+    const historyRes = await fetch(`${API_BASE}/tracking/history?order_id=${orderId}`);
+    const historyPayload = historyRes.ok
+      ? await historyRes.json().catch(() => ({ tracking_points: [] }))
+      : { tracking_points: [] };
+
+    trackData.tracking_points = Array.isArray(historyPayload.tracking_points)
+      ? historyPayload.tracking_points
+      : [];
 
     recordTrackedOrder(trackData);
     renderTrackingResult(trackData);
 
   } catch (error) {
     console.error('Error tracking order:', error);
-    result.innerHTML = `<div class="track-error">❌ Error loading order. Is the backend running?</div>`;
+    result.innerHTML = `<div class="track-error">❌ Unable to load live tracking right now. Please try again shortly.</div>`;
   }
 }
 
@@ -1182,10 +1171,11 @@ function renderTrackingResult(data) {
           </div>
           ${data.latitude ? `<div class="track-driver-speed">${data.speed_kmh > 0 ? Math.round(data.speed_kmh) + ' km/h' : 'Stopped'}</div>` : ''}
         </div>
-      ` : '<div class="track-no-driver">Driver not yet assigned</div>'}
+      ` : '<div class="track-no-driver">Driver not yet assigned.</div>'}
+      ${!data.latitude && data.driver_name ? '<div class="track-no-driver">Driver assigned. Live GPS will appear once the rider starts sharing location.</div>' : ''}
       ${data.updated_at ? `<div class="track-updated">Last updated: ${new Date(data.updated_at).toLocaleTimeString()}</div>` : ''}
     </div>`;
-  result.innerHTML += renderTrackedHistoryHtml();
+  result.innerHTML += renderTrackingHistoryPoints(data.tracking_points || []);
 
   // Show live map if GPS data is available
   const mapContainer = document.getElementById('liveMapContainer');
@@ -1285,6 +1275,37 @@ function renderTrackedHistoryHtml() {
           <div><strong>#${h.order_id}</strong> · ${h.status || 'Confirmed'}</div>
           <div style="color:var(--muted);">Bought: ${formatOrderDate(h.ordered_at)}</div>
           <div style="color:var(--muted);">Items: ${formatOrderItems(h.items)}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderTrackingHistoryPoints(points) {
+  if (!Array.isArray(points) || points.length === 0) {
+    return `
+      <div class="track-card" style="margin-top:0.9rem;">
+        <div class="track-card-header">
+          <strong>Tracking Activity</strong>
+        </div>
+        <div class="track-no-driver">No live route updates have been recorded for this order yet.</div>
+      </div>
+    `;
+  }
+
+  const recentPoints = points.slice(-5).reverse();
+  return `
+    <div class="track-card" style="margin-top:0.9rem;">
+      <div class="track-card-header">
+        <strong>Recent Driver Updates</strong>
+      </div>
+      ${recentPoints.map(point => `
+        <div class="tracking-history-row">
+          <div>
+            <div class="tracking-history-time">${formatOrderDate(point.recorded_at)}</div>
+            <div class="tracking-history-meta">${point.driver_name || 'Driver'} · ${Number(point.latitude).toFixed(5)}, ${Number(point.longitude).toFixed(5)}</div>
+          </div>
+          <div class="tracking-history-speed">${point.speed_kmh > 0 ? Math.round(point.speed_kmh) + ' km/h' : 'Stopped'}</div>
         </div>
       `).join('')}
     </div>
