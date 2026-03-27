@@ -40,11 +40,19 @@
 
   <!-- Mobile Nav Drawer -->
   <div class="mobile-drawer" id="mobileDrawer">
-    <a href="#home" onclick="closeMobileMenu()">Home</a>
-    <a href="#menu" onclick="closeMobileMenu()">Menu</a>
-    <a href="#orders" onclick="closeMobileMenu()">My Orders</a>
-    <a href="#" onclick="showModal('trackModal'); closeMobileMenu()">Track Order</a>
-    <a href="#" onclick="showModal('driverTrackModal'); closeMobileMenu()">🚗 Driver Mode</a>
+    <div class="mobile-drawer-links">
+      <a href="#home" onclick="closeMobileMenu()">Home</a>
+      <a href="#menu" onclick="closeMobileMenu()">Menu</a>
+      <a href="#orders" onclick="closeMobileMenu()">My Orders</a>
+      <a href="#" onclick="showModal('trackModal'); closeMobileMenu()">Track Order</a>
+      <a href="#" onclick="showModal('driverTrackModal'); closeMobileMenu()">🚗 Driver Mode</a>
+      <a href="#" onclick="showAdminLogin(); closeMobileMenu()">Admin</a>
+    </div>
+    <div class="mobile-drawer-actions">
+      <button class="mobile-drawer-btn" type="button" onclick="toggleWishlist(); closeMobileMenu()">♡ Favourites</button>
+      <button class="mobile-drawer-btn" type="button" onclick="toggleCart(); closeMobileMenu()">🛒 Open Cart</button>
+      <button class="mobile-drawer-btn mobile-drawer-primary" type="button" onclick="showModal('loginModal'); closeMobileMenu()">Sign In</button>
+    </div>
   </div>
 
   <!-- ========== HERO SECTION ========== -->
