@@ -4,10 +4,10 @@
 // Professional password hashing using BCrypt
 // =============================================
 
-import java.security.SecureRandom;
-import java.util.Base64;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.Base64;
 
 public class PasswordHasher {
 
@@ -40,9 +40,7 @@ public class PasswordHasher {
             
             return saltString + "$" + hashString;
         } catch (Exception e) {
-            System.out.println("Error hashing password: " + e.getMessage());
-            // Fallback to simple hash (not recommended for production)
-            return simpleHash(password);
+            throw new IllegalStateException("Unable to hash password securely", e);
         }
     }
     
@@ -53,10 +51,7 @@ public class PasswordHasher {
         try {
             // Split salt and hash
             String[] parts = storedHash.split("\\$");
-            if (parts.length != 2) {
-                // Might be old format, try simple comparison
-                return password.equals(storedHash);
-            }
+            if (parts.length != 2) return false;
             
             String saltString = parts[0];
             String hashString = parts[1];
@@ -77,21 +72,7 @@ public class PasswordHasher {
             );
         } catch (Exception e) {
             System.out.println("Error verifying password: " + e.getMessage());
-            // Fallback for old format
-            return password.equals(storedHash);
-        }
-    }
-    
-    /**
-     * Simple hash fallback (not recommended)
-     */
-    private static String simpleHash(String password) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(password.getBytes(StandardCharsets.UTF_8));
-            return Base64.getEncoder().encodeToString(hash);
-        } catch (Exception e) {
-            return password;
+            return false;
         }
     }
     

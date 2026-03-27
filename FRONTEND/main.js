@@ -204,9 +204,7 @@ async function loadFoods() {
 
     const foods = await res.json();
     
-    // If empty or invalid, fall back to local menu
     if (!Array.isArray(foods) || foods.length === 0) {
-      console.log('Backend returned empty menu, using local fallback');
       throw new Error('Empty menu from backend');
     }
 
@@ -233,14 +231,23 @@ async function loadFoods() {
 
     renderMenu(menuData);
   } catch (error) {
-    console.warn('Failed to load foods from backend, using local fallback:', error);
-    // Ensure local menu items have images
-    menuData.forEach((item) => {
-      if (!item.imageUrl) item.imageUrl = getFoodImageForItem(item);
-    });
-    renderMenu(menuData);
-    showToast('⚠️ Backend unavailable. Showing local menu.');
+    console.warn('Failed to load foods from backend:', error);
+    renderMenuUnavailable();
+    
+    showToast('Menu is unavailable right now. Please try again shortly.');
   }
+}
+
+function renderMenuUnavailable() {
+  const menuGrid = document.getElementById('menuGrid');
+  const menuCount = document.getElementById('menuCount');
+  if (menuGrid) {
+    menuGrid.innerHTML = `
+      <div class="empty-orders" style="grid-column:1 / -1;">
+        Menu is currently unavailable. Please wait a moment and refresh.
+      </div>`;
+  }
+  if (menuCount) menuCount.textContent = '0 items available';
 }
 
 function getFoodImageForItem(item) {
@@ -269,7 +276,7 @@ function getFoodImageForItem(item) {
   const exact = byName.find((x) => name.includes(x.key));
   if (exact) return exact.url;
 
-  // Category fallback photos
+  // Category-based food photos
   if (category === 'burger') return 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1000&q=80';
   if (category === 'pizza') return 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1000&q=80';
   if (category === 'chicken') return 'https://images.unsplash.com/photo-1562967916-eb82221dfb92?auto=format&fit=crop&w=1000&q=80';
@@ -325,7 +332,7 @@ function renderMenu(items) {
     <div class="menu-card" style="animation-delay:${index * 0.05}s;" onclick="showFoodDetails(${item.id})">
       <div class="menu-card-img">
         ${item.imageUrl
-          ? `<img src="${item.imageUrl}" alt="${item.name}" class="menu-card-photo" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"/><span class="menu-emoji-fallback" style="display:none;">${item.emoji}</span>`
+          ? `<img src="${item.imageUrl}" alt="${item.name}" class="menu-card-photo" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"/><span class="menu-emoji-display" style="display:none;">${item.emoji}</span>`
           : `<span>${item.emoji}</span>`}
         ${item.badge ? `<div class="menu-badge">${item.badge}</div>` : ''}
         <button class="card-wishlist-btn ${isWishlisted ? 'liked' : ''}"
@@ -361,7 +368,7 @@ function showFoodDetails(itemId) {
   document.getElementById('foodModalBody').innerHTML = `
     <div style="text-align:center;">
       ${item.imageUrl
-        ? `<img src="${item.imageUrl}" alt="${item.name}" class="food-modal-photo" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"/><div class="food-modal-emoji-fallback" style="display:none;">${item.emoji}</div>`
+        ? `<img src="${item.imageUrl}" alt="${item.name}" class="food-modal-photo" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"/><div class="food-modal-emoji-display" style="display:none;">${item.emoji}</div>`
         : `<div style="font-size:5.5rem; margin-bottom:1rem; line-height:1;">${item.emoji}</div>`}
       ${item.badge ? `<span class="menu-badge" style="position:relative; display:inline-block; margin-bottom:0.8rem;">${item.badge}</span><br/>` : ''}
       <h2 style="font-family:'Playfair Display',serif; margin-bottom:0.4rem;">${item.name}</h2>
@@ -722,7 +729,7 @@ function formatCard(input) {
   input.value = v.replace(/(.{4})/g, '$1 ').trim();
 }
 
-// API Base URL - runtime-configurable for hosted deployments, with a safe local fallback.
+// API Base URL - runtime-configurable for hosted deployments.
 const API_BASE = (() => {
   const configured = window.env && typeof window.env.API_URL === 'string'
     ? window.env.API_URL.trim().replace(/\/$/, '')
@@ -796,24 +803,26 @@ async function placeOrder() {
     status: 'Confirmed'
   };
 
-  // Try backend, fallback to local
   try {
     const res = await fetch(`${API_BASE}/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(backendOrderData)
     });
-    if (res.ok) {
-      const result = await res.json();
-      orderData.id = Number(result.orderId || Date.now());
-      orderData.status = result.status || 'Confirmed';
-      orderData.orderedAt = new Date().toISOString();
-      orderData.driver_name = result.driver_name || '';
-      orderData.driver_phone = result.driver_phone || '';
-      if (Array.isArray(result.items) && result.items.length) orderData.items = result.items;
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(result.error || 'Unable to place your order right now.');
+      return;
     }
+    orderData.id = Number(result.orderId || Date.now());
+    orderData.status = result.status || 'Confirmed';
+    orderData.orderedAt = new Date().toISOString();
+    orderData.driver_name = result.driver_name || '';
+    orderData.driver_phone = result.driver_phone || '';
+    if (Array.isArray(result.items) && result.items.length) orderData.items = result.items;
   } catch (_) {
-    // Use local fallback — already set above
+    showToast('Unable to reach the server to place your order.');
+    return;
   }
 
   // Save order

@@ -152,29 +152,13 @@ public class UserRoutes implements HttpHandler {
                 return;
             }
 
-            // Email exists, verify password (supports both old and new hash formats)
+            // Email exists, verify password using the stored secure hash
             String storedPassword = checkRs.getString("password");
-            boolean passwordValid = false;
-            
-            // Check if it's the new format (contains $)
-            if (storedPassword != null && storedPassword.contains("$")) {
-                passwordValid = PasswordHasher.verifyPassword(password, storedPassword);
-            } else {
-                // Fallback for old plain text passwords
-                passwordValid = password.equals(storedPassword);
-            }
+            boolean passwordValid = storedPassword != null && PasswordHasher.verifyPassword(password, storedPassword);
             
             if (!passwordValid) {
                 Server.sendResponse(exchange, 401, "{\"error\":\"Incorrect password. Please try again or use 'Forgot Password' to reset.\"}");
                 return;
-            }
-
-            if (storedPassword != null && !storedPassword.contains("$")) {
-                String upgradeSql = "UPDATE users SET password = ? WHERE id = ?";
-                PreparedStatement upgradeStmt = conn.prepareStatement(upgradeSql);
-                upgradeStmt.setString(1, PasswordHasher.hashPassword(password));
-                upgradeStmt.setInt(2, checkRs.getInt("id"));
-                upgradeStmt.executeUpdate();
             }
 
             // Login successful
