@@ -1332,61 +1332,76 @@ function startDriverSharing() {
     return;
   }
 
+  if (!window.isSecureContext) {
+    statusEl.innerHTML = `<div class="driver-share-error">❌ Live GPS only works on a secure HTTPS site. Open the deployed site instead of an insecure page.</div>`;
+    return;
+  }
+
   statusEl.innerHTML = `<div class="driver-share-loading">📡 Getting your GPS location...</div>`;
   btn.disabled = true;
   btn.textContent = '⏳ Sharing...';
 
-  let lastLat = null, lastLng = null;
+  async function sendLocation(position) {
+    const lat      = position.coords.latitude;
+    const lng      = position.coords.longitude;
+    const speed    = position.coords.speed ? (position.coords.speed * 3.6) : 0; // m/s → km/h
+    const heading  = position.coords.heading || 0;
+    const accuracy = position.coords.accuracy ? Math.round(position.coords.accuracy) : null;
 
-  function sendLocation(position) {
-    const lat     = position.coords.latitude;
-    const lng     = position.coords.longitude;
-    const speed   = position.coords.speed ? (position.coords.speed * 3.6) : 0; // m/s → km/h
-    const heading = position.coords.heading || 0;
+    try {
+      const res = await fetch(`${API_BASE}/tracking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id:    orderId,
+          driver_name: driverName,
+          latitude:    lat,
+          longitude:   lng,
+          speed_kmh:   Math.round(speed * 10) / 10,
+          heading:     Math.round(heading || 0)
+        })
+      });
 
-    lastLat = lat; lastLng = lng;
-
-    fetch(`${API_BASE}/tracking`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        order_id:    orderId,
-        driver_name: driverName,
-        latitude:    lat,
-        longitude:   lng,
-        speed_kmh:   Math.round(speed * 10) / 10,
-        heading:     Math.round(heading || 0)
-      })
-    }).then(res => {
-      if (res.ok) {
-        statusEl.innerHTML = `
-          <div class="driver-share-active">
-            <div class="live-dot" style="display:inline-block; margin-right:6px;"></div>
-            <strong>Sharing live location</strong><br/>
-            <small>📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}</small><br/>
-            <small>🏎️ ${Math.round(speed)} km/h · Order #${orderId}</small><br/>
-            <small style="color:var(--muted);">Updated ${new Date().toLocaleTimeString()}</small>
-          </div>`;
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(payload.error || 'Unable to send GPS update.');
       }
-    }).catch(() => {
-      statusEl.innerHTML = `<div class="driver-share-error">⚠️ Could not send location. Check backend connection.</div>`;
-    });
+
+      statusEl.innerHTML = `
+        <div class="driver-share-active">
+          <div class="live-dot" style="display:inline-block; margin-right:6px;"></div>
+          <strong>Sharing live location</strong><br/>
+          <small>📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}</small><br/>
+          <small>🏎️ ${Math.round(speed)} km/h · Order #${orderId}</small><br/>
+          <small>🎯 Accuracy ${accuracy ? accuracy + 'm' : 'N/A'} · Updated ${new Date().toLocaleTimeString()}</small>
+        </div>`;
+    } catch (error) {
+      statusEl.innerHTML = `<div class="driver-share-error">⚠️ Could not send location: ${error.message}</div>`;
+    }
   }
 
   function onGpsError(err) {
-    statusEl.innerHTML = `<div class="driver-share-error">❌ GPS error: ${err.message}<br/><small>Make sure location is enabled on your device.</small></div>`;
+    const help = err.code === 1
+      ? 'Allow location permission in your browser settings and try again.'
+      : 'Make sure GPS/location is enabled on your device and try again outdoors if needed.';
+    statusEl.innerHTML = `<div class="driver-share-error">❌ GPS error: ${err.message}<br/><small>${help}</small></div>`;
     btn.disabled = false;
     btn.textContent = '📍 Start Sharing Location';
+    btn.onclick = startDriverSharing;
   }
 
-  // Watch position continuously
+  navigator.geolocation.getCurrentPosition(sendLocation, onGpsError, {
+    enableHighAccuracy: true,
+    maximumAge: 0,
+    timeout: 12000
+  });
+
   driverWatchId = navigator.geolocation.watchPosition(sendLocation, onGpsError, {
     enableHighAccuracy: true,
     maximumAge: 3000,
     timeout: 10000
   });
 
-  // Also send every 5 seconds as backup
   driverSharingInterval = setInterval(() => {
     navigator.geolocation.getCurrentPosition(sendLocation, onGpsError, {
       enableHighAccuracy: true,
