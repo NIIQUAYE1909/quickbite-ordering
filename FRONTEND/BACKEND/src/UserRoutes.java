@@ -24,8 +24,15 @@ public class UserRoutes implements HttpHandler {
         Server.addCorsHeaders(exchange);
         String method = exchange.getRequestMethod();
 
-        if (method.equalsIgnoreCase("POST")) {
-            String path = exchange.getRequestURI().getPath();
+        String path = exchange.getRequestURI().getPath();
+
+        if (method.equalsIgnoreCase("GET")) {
+            if (path.endsWith("/stats")) {
+                getUserStats(exchange);
+            } else {
+                Server.sendResponse(exchange, 404, "{\"error\":\"Not found\"}");
+            }
+        } else if (method.equalsIgnoreCase("POST")) {
             if (path.endsWith("/register")) {
                 registerUser(exchange);
             } else if (path.endsWith("/login")) {
@@ -35,6 +42,25 @@ public class UserRoutes implements HttpHandler {
             }
         } else {
             Server.sendResponse(exchange, 405, "{\"error\":\"Method not allowed\"}");
+        }
+    }
+
+    private void getUserStats(HttpExchange exchange) throws IOException {
+        Connection conn = DatabaseConnection.getConnection();
+
+        if (conn == null) {
+            Server.sendResponse(exchange, 500, "{\"error\":\"Database not connected. Please try again later.\"}");
+            return;
+        }
+
+        try {
+            PreparedStatement stmt = conn.prepareStatement("SELECT COUNT(*) AS total_users FROM users");
+            ResultSet rs = stmt.executeQuery();
+            int totalUsers = rs.next() ? rs.getInt("total_users") : 0;
+            Server.sendResponse(exchange, 200, "{\"total_users\":" + totalUsers + "}");
+        } catch (Exception e) {
+            System.out.println("Error fetching user stats: " + e.getMessage());
+            Server.sendResponse(exchange, 500, "{\"error\":\"Failed to load user stats.\"}");
         }
     }
 

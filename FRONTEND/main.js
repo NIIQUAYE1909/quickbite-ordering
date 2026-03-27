@@ -1012,8 +1012,14 @@ async function loadAllOrdersAdmin() {
   list.innerHTML = '<div class="empty-orders">Loading orders from database...</div>';
   
   try {
-    const response = await fetch(`${API_BASE}/orders`);
+    const [response, usersResponse] = await Promise.all([
+      fetch(`${API_BASE}/orders`),
+      fetch(`${API_BASE}/users/stats`).catch(() => null)
+    ]);
     const dbOrders = await response.json();
+    const userStats = usersResponse && usersResponse.ok
+      ? await usersResponse.json().catch(() => ({ total_users: 0 }))
+      : { total_users: 0 };
     
     if (!Array.isArray(dbOrders) || dbOrders.length === 0) {
       list.innerHTML = '<div class="empty-orders">No orders in database yet! 🍽️</div>';
@@ -1027,11 +1033,16 @@ async function loadAllOrdersAdmin() {
     const preparing = dbOrders.filter(o => o.status === 'Preparing').length;
     const onTheWay = dbOrders.filter(o => o.status === 'On the way').length;
     const delivered = dbOrders.filter(o => o.status === 'Delivered').length;
+    const totalUsers = Number(userStats.total_users || 0);
     
     if (stats) {
       stats.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem;"><div style="background:var(--card); padding:1rem; border-radius:12px; text-align:center; border:1px solid var(--border);"><div style="font-size:1.8rem; font-weight:700; color:var(--accent);">${dbOrders.length}</div><div style="font-size:0.8rem; color:var(--muted);">Total Orders</div></div><div style="background:var(--card); padding:1rem; border-radius:12px; text-align:center; border:1px solid var(--border);"><div style="font-size:1.8rem; font-weight:700; color:var(--success);">GH₵ ${totalRevenue.toFixed(2)}</div><div style="font-size:0.8rem; color:var(--muted);">Total Revenue</div></div><div style="background:var(--card); padding:1rem; border-radius:12px; text-align:center; border:1px solid var(--border);"><div style="font-size:1.8rem; font-weight:700; color:orange;">${confirmed}</div><div style="font-size:0.8rem; color:var(--muted);">Confirmed</div></div><div style="background:var(--card); padding:1rem; border-radius:12px; text-align:center; border:1px solid var(--border);"><div style="font-size:1.8rem; font-weight:700; color:blue;">${onTheWay}</div><div style="font-size:0.8rem; color:var(--muted);">On the Way</div></div><div style="background:var(--card); padding:1rem; border-radius:12px; text-align:center; border:1px solid var(--border);"><div style="font-size:1.8rem; font-weight:700; color:green;">${delivered}</div><div style="font-size:0.8rem; color:var(--muted);">Delivered</div></div></div>`;
     }
     
+    if (stats?.firstElementChild) {
+      stats.firstElementChild.insertAdjacentHTML('afterbegin', `<div style="background:var(--card); padding:1rem; border-radius:12px; text-align:center; border:1px solid var(--border);"><div style="font-size:1.8rem; font-weight:700; color:#8b5cf6;">${totalUsers}</div><div style="font-size:0.8rem; color:var(--muted);">Total Users</div></div>`);
+    }
+
     list.innerHTML = dbOrders.map(order => {
       const canTrackOrder = Boolean(order.driver_name) || ['Preparing', 'On the way', 'Delivered'].includes(order.status);
       return `<div class="order-card" style="flex-direction:column; gap:0.5rem;"><div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;"><div><strong style="font-size:1.1rem;">📦 Order #${order.id}</strong><span style="margin-left:0.5rem; padding:0.2rem 0.5rem; border-radius:6px; font-size:0.75rem; background:${order.status === 'Delivered' ? '#22c55e' : order.status === 'On the way' ? '#3b82f6' : order.status === 'Preparing' ? '#f59e0b' : 'var(--accent)'};">${order.status}</span></div><div style="font-weight:700; color:var(--accent); font-size:1.2rem;">GH₵ ${parseFloat(order.total || 0).toFixed(2)}</div></div><div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0.5rem; font-size:0.85rem; color:var(--muted);"><div><strong>👤 Customer:</strong> ${order.customer_name || 'N/A'}</div><div><strong>📱 Phone:</strong> ${order.phone || 'N/A'}</div><div><strong>📍 Address:</strong> ${order.address || 'N/A'}</div><div><strong>🕐 Time:</strong> ${order.created_at || 'N/A'}</div>${order.driver_name ? `<div><strong>🚗 Driver:</strong> ${order.driver_name} (${order.driver_phone || 'N/A'})</div>` : ''}</div><div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid var(--border);">${order.status === 'Confirmed' ? `<button onclick="updateOrderStatus(${order.id}, 'Preparing')" style="background:#f59e0b; color:white; border:none; padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer; font-family:'DM Sans',sans-serif;">🍳 Start Preparing</button>` : ''}${order.status === 'Preparing' ? `<button onclick="showAssignDriverModal(${order.id}, '${order.customer_name}', '${order.phone}', '${order.address}', ${order.total})" style="background:#3b82f6; color:white; border:none; padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer; font-family:'DM Sans',sans-serif;">🚗 Assign Driver</button>` : ''}${order.status === 'On the way' ? `<button onclick="updateOrderStatus(${order.id}, 'Delivered')" style="background:#22c55e; color:white; border:none; padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer; font-family:'DM Sans',sans-serif;">✅ Mark Delivered</button>` : ''}${canTrackOrder ? `<button class="track-live-btn" onclick="trackOrderById(${order.id})">📍 View Tracking</button>` : ''}</div></div>`;
