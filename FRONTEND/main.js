@@ -171,6 +171,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (document.getElementById('wishlistSidebar').classList.contains('open')) toggleWishlist();
     }
   });
+
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitSearch();
+      }
+    });
+  }
 });
 
 // ---------- LOAD MENU FROM BACKEND ----------
@@ -377,6 +387,20 @@ function filterCategory(category, btn) {
 }
 
 function filterMenu() { applyFilters(); }
+
+function submitSearch() {
+  const searchInput = document.getElementById('searchInput');
+  if (!searchInput) return;
+
+  applyFilters();
+
+  const hasQuery = searchInput.value.trim().length > 0;
+  scrollToMenu();
+
+  if (hasQuery) {
+    showToast(`Searching for "${searchInput.value.trim()}"`);
+  }
+}
 
 function applyFilters() {
   const searchText = document.getElementById('searchInput').value.toLowerCase().trim();
