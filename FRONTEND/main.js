@@ -347,8 +347,6 @@ function renderMenu(items) {
 
 // ---------- FOOD DETAIL MODAL ----------
 function showFoodDetails(itemId) {
-  if (!requireAuth('Please sign in to view menu details.')) return;
-
   const item = menuData.find(i => i.id === itemId);
   if (!item) return;
 
@@ -449,7 +447,7 @@ function applyFilters() {
 
 // ---------- CART ----------
 function addToCart(itemId) {
-  if (!requireAuth('Please sign in before adding items to your cart.')) return;
+  if (!requireAuth('Sign in to add this item to your cart, or create an account if you are new here.')) return;
 
   const item = menuData.find(i => i.id === itemId);
   if (!item) return;
@@ -557,8 +555,6 @@ function updateCartUI() {
 }
 
 function toggleCart() {
-  if (!requireAuth('Please sign in to view your cart.')) return;
-
   const sidebar = document.getElementById('cartSidebar');
   const overlay = document.getElementById('cartOverlay');
   // Close wishlist if open
@@ -606,8 +602,6 @@ function applyPromoFromCart() {
 
 // ---------- WISHLIST ----------
 function toggleWishlistItem(itemId) {
-  if (!requireAuth('Please sign in to save favourites.')) return;
-
   const item = menuData.find(i => i.id === itemId);
   if (!item) return;
 
@@ -649,8 +643,6 @@ function updateWishlistUI() {
 }
 
 function toggleWishlist() {
-  if (!requireAuth('Please sign in to view your favourites.')) return;
-
   const sidebar = document.getElementById('wishlistSidebar');
   const overlay = document.getElementById('wishlistOverlay');
   if (document.getElementById('cartSidebar').classList.contains('open')) {
@@ -663,7 +655,7 @@ function toggleWishlist() {
 
 // ---------- CHECKOUT & ORDER ----------
 function initiateCheckout() {
-  if (!requireAuth('Please sign in before placing an order.')) return;
+  if (!requireAuth('Sign in to complete your order. If you do not have an account yet, create one first.')) return;
 
   if (cart.length === 0) return;
 
@@ -1579,14 +1571,8 @@ function updateAuthUI() {
 
 function enforceAuthState() {
   const gate = document.getElementById('authGate');
-  const isLoggedIn = Boolean(currentUser);
-
-  document.body.classList.toggle('auth-locked', !isLoggedIn);
-  if (gate) gate.classList.toggle('open', !isLoggedIn);
-
-  if (!isLoggedIn) {
-    closeProtectedPanels();
-  }
+  document.body.classList.remove('auth-locked');
+  if (gate) gate.classList.remove('open');
 }
 
 function closeProtectedPanels() {
@@ -1598,6 +1584,7 @@ function closeProtectedPanels() {
 
 function requireAuth(message = 'Please sign in to continue.') {
   if (currentUser) return true;
+  setAuthFeedback('loginFeedback', message);
   showToast(message);
   showModal('loginModal');
   return false;

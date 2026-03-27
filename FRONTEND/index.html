@@ -11,9 +11,9 @@
 <body>
   <div class="auth-gate" id="authGate">
     <div class="auth-gate-card">
-      <div class="auth-gate-badge">Account Required</div>
-      <h1>Sign in to use QuickBite.</h1>
-      <p>Create your account or sign in before browsing the menu, placing orders, tracking deliveries, or saving favourites.</p>
+      <div class="auth-gate-badge">Ready To Order?</div>
+      <h1>Sign in before checkout.</h1>
+      <p>You can browse the menu first. When you are ready to order, sign in or create an account to continue.</p>
       <div class="auth-gate-actions">
         <button class="btn-primary" type="button" onclick="showModal('loginModal')">Sign In</button>
         <button class="btn-outline auth-gate-outline" type="button" onclick="showModal('registerModal')">Create Account</button>
@@ -401,7 +401,7 @@
     <div class="modal">
       <button class="modal-close" onclick="closeModal('loginModal')">✕</button>
       <h2>Welcome Back 👋</h2>
-      <p class="modal-sub">Sign in with your registered account to continue.</p>
+      <p class="modal-sub">Sign in when you are ready to place your order.</p>
       <div class="form-group">
         <label>Email</label>
         <input type="email" id="loginEmail" placeholder="you@example.com"/>
@@ -424,7 +424,7 @@
     <div class="modal">
       <button class="modal-close" onclick="closeModal('registerModal')">✕</button>
       <h2>Create Account 🎉</h2>
-      <p class="modal-sub">Use a strong password so your account stays protected.</p>
+      <p class="modal-sub">Create your account to order food, save favourites, and track deliveries.</p>
       <div class="form-group">
         <label>Full Name</label>
         <input type="text" id="regName" placeholder="John Mensah"/>
