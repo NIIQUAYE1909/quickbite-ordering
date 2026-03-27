@@ -141,7 +141,7 @@ public class UserRoutes implements HttpHandler {
             }
 
             // Find user by email
-            String checkSql = "SELECT id, name, password FROM users WHERE LOWER(email) = ?";
+            String checkSql = "SELECT id, name, email, phone, password FROM users WHERE LOWER(email) = ?";
             PreparedStatement checkStmt = conn.prepareStatement(checkSql);
             checkStmt.setString(1, email.trim().toLowerCase());
             ResultSet checkRs = checkStmt.executeQuery();
@@ -169,10 +169,24 @@ public class UserRoutes implements HttpHandler {
                 return;
             }
 
+            if (storedPassword != null && !storedPassword.contains("$")) {
+                String upgradeSql = "UPDATE users SET password = ? WHERE id = ?";
+                PreparedStatement upgradeStmt = conn.prepareStatement(upgradeSql);
+                upgradeStmt.setString(1, PasswordHasher.hashPassword(password));
+                upgradeStmt.setInt(2, checkRs.getInt("id"));
+                upgradeStmt.executeUpdate();
+            }
+
             // Login successful
             int userId = checkRs.getInt("id");
             String name = checkRs.getString("name");
-            String response = "{\"message\":\"Welcome back! Sign in successful.\",\"userId\":" + userId + ",\"name\":\"" + name + "\"}";
+            String response = "{"
+                + "\"message\":\"Welcome back! Sign in successful.\","
+                + "\"userId\":" + userId + ","
+                + "\"name\":\"" + escapeJson(name) + "\","
+                + "\"email\":\"" + escapeJson(checkRs.getString("email")) + "\","
+                + "\"phone\":\"" + escapeJson(checkRs.getString("phone")) + "\""
+                + "}";
             Server.sendResponse(exchange, 200, response);
 
         } catch (Exception e) {
@@ -197,5 +211,14 @@ public class UserRoutes implements HttpHandler {
         }
         if (end == -1) end = json.length();
         return json.substring(start, end);
+    }
+
+    private String escapeJson(String value) {
+        if (value == null) return "";
+        return value.replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n")
+                    .replace("\r", "\\r")
+                    .replace("\t", "\\t");
     }
 }

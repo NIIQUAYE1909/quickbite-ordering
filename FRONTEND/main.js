@@ -199,7 +199,12 @@ async function loadFoods() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const foods = await res.json();
-    if (!Array.isArray(foods)) throw new Error('Invalid foods payload');
+    
+    // If empty or invalid, fall back to local menu
+    if (!Array.isArray(foods) || foods.length === 0) {
+      console.log('Backend returned empty menu, using local fallback');
+      throw new Error('Empty menu from backend');
+    }
 
     // Keep local fields that UI expects, with safe defaults
     const normalized = foods.map((f) => ({
@@ -225,11 +230,12 @@ async function loadFoods() {
     renderMenu(menuData);
   } catch (error) {
     console.warn('Failed to load foods from backend, using local fallback:', error);
+    // Ensure local menu items have images
     menuData.forEach((item) => {
       if (!item.imageUrl) item.imageUrl = getFoodImageForItem(item);
     });
     renderMenu(menuData);
-    showToast('⚠️ Backend menu unavailable. Showing local menu.');
+    showToast('⚠️ Backend unavailable. Showing local menu.');
   }
 }
 
@@ -341,6 +347,8 @@ function renderMenu(items) {
 
 // ---------- FOOD DETAIL MODAL ----------
 function showFoodDetails(itemId) {
+  if (!requireAuth('Please sign in to view menu details.')) return;
+
   const item = menuData.find(i => i.id === itemId);
   if (!item) return;
 
@@ -899,23 +907,14 @@ function clearOrders() {
 // ========== ADMIN PANEL FUNCTIONS ==========
 // Simple admin password protection
 const ADMIN_PASSWORD = 'quickbite2025'; // Change this to your desired password
-let isAdminLoggedIn = false;
+let isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true';
 
 function showAdminLogin() {
   if (isAdminLoggedIn) {
-    // Already logged in, scroll to admin section
     scrollToSection('admin');
   } else {
     showModal('adminLoginModal');
   }
-}
-
-// Admin credentials - set your own secure password here
-const ADMIN_PASSWORD = "admin123"; // Change this to your desired admin password
-let isAdminLoggedIn = localStorage.getItem("adminLoggedIn") === "true";
-
-function showAdminLogin() {
-  showModal('adminLoginModal');
 }
 
 function verifyAdmin() {
@@ -924,49 +923,26 @@ function verifyAdmin() {
   
   if (password === ADMIN_PASSWORD) {
     isAdminLoggedIn = true;
-    localStorage.setItem("adminLoggedIn", "true");
+    localStorage.setItem('qb_admin_logged_in', 'true');
     closeModal('adminLoginModal');
     errorEl.style.display = 'none';
     showToast('✅ Admin logged in successfully');
-    showAdminPanel();
+    scrollToSection('admin');
   } else {
     errorEl.style.display = 'block';
     document.getElementById('adminPassword').value = '';
   }
 }
-  const errorMsg = document.getElementById('adminLoginError');
-  
-  if (password === ADMIN_PASSWORD) {
-    isAdminLoggedIn = true;
-    closeModal('adminLoginModal');
-    scrollToSection('admin');
-    showToast('✅ Welcome to Admin Panel!');
-    // Save admin state
-    try {
-      localStorage.setItem('qb_admin_logged_in', 'true');
-    } catch(e) {}
-  } else {
-    errorMsg.style.display = 'block';
-  }
-}
 
 function logoutAdmin() {
   isAdminLoggedIn = false;
-  try {
-    localStorage.removeItem('qb_admin_logged_in');
-  } catch(e) {}
+  localStorage.removeItem('qb_admin_logged_in');
   showToast('👋 Admin logged out');
-  // Hide admin section
-  document.getElementById('admin').scrollIntoView({behavior: 'smooth'});
 }
 
 // Check admin login on page load
 function checkAdminLogin() {
-  try {
-    if (localStorage.getItem('qb_admin_logged_in') === 'true') {
-      isAdminLoggedIn = true;
-    }
-  } catch(e) {}
+  isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true';
 }
 
 // ========== ADMIN PANEL FUNCTIONS ==========
@@ -1602,13 +1578,15 @@ function updateAuthUI() {
 }
 
 function enforceAuthState() {
-  // Flexible auth: users can browse without signing in
-  // Only require sign in when trying to place an order
   const gate = document.getElementById('authGate');
-  
-  // Always allow browsing - no auth gate blocking
-  document.body.classList.remove('auth-locked');
-  if (gate) gate.classList.remove('open');
+  const isLoggedIn = Boolean(currentUser);
+
+  document.body.classList.toggle('auth-locked', !isLoggedIn);
+  if (gate) gate.classList.toggle('open', !isLoggedIn);
+
+  if (!isLoggedIn) {
+    closeProtectedPanels();
+  }
 }
 
 function closeProtectedPanels() {
