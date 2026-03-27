@@ -777,6 +777,10 @@ async function placeOrder() {
   const orderData = {
     id: orderId,
     customer: { name, phone, address },
+    customer_name: name,
+    customer_email: email,
+    phone,
+    address,
     items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price })),
     subtotal, discount, deliveryFee, grandTotal,
     payment: method,
@@ -799,6 +803,8 @@ async function placeOrder() {
       orderData.id = Number(result.orderId || Date.now());
       orderData.status = result.status || 'Confirmed';
       orderData.orderedAt = new Date().toISOString();
+      orderData.driver_name = result.driver_name || '';
+      orderData.driver_phone = result.driver_phone || '';
     }
   } catch (_) {
     // Use local fallback — already set above
@@ -821,32 +827,21 @@ async function placeOrder() {
 }
 
 function showOrderSuccess(order) {
+  const driverLine = order.driver_name
+    ? ` Your rider is ${order.driver_name}${order.driver_phone ? ` (${order.driver_phone})` : ''}.`
+    : '';
   document.getElementById('successMsg').textContent =
-    `Your food is being prepared for delivery to ${order.customer.address}.`;
+    `Your order has been received for delivery to ${order.customer.address}.${driverLine}`;
   document.getElementById('successOrderId').textContent = order.id;
   showModal('successModal');
 
-  // Simulate order status progression
   const steps = ['step1','step2','step3','step4'];
-  let current = 0;
-  steps[0].split && document.getElementById(steps[0]).classList.add('active');
-
-  const interval = setInterval(() => {
-    current++;
-    if (current >= steps.length) { clearInterval(interval); return; }
-
-    const el = document.getElementById(steps[current]);
-    el.classList.add('active');
-    document.getElementById(steps[current - 1]).classList.add('done');
-    document.getElementById(steps[current - 1]).classList.remove('active');
-
-    // Update order status in list
-    const statusMap = { 1:'Preparing', 2:'On the way', 3:'Delivered' };
-    if (statusMap[current]) {
-      const ord = orders.find(o => o.id === order.id);
-      if (ord) { ord.status = statusMap[current]; saveState(); renderOrders(); }
-    }
-  }, 4000);
+  steps.forEach(stepId => {
+    const stepEl = document.getElementById(stepId);
+    if (!stepEl) return;
+    stepEl.classList.remove('active', 'done');
+  });
+  document.getElementById(steps[0])?.classList.add('active');
 }
 
 // ---------- RENDER ORDERS ----------

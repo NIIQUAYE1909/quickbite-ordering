@@ -14,6 +14,27 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class OrderRoutes implements HttpHandler {
+    private static final String[] AUTO_DRIVER_NAMES = {
+        "Kwame Mensah",
+        "Ama Owusu",
+        "Kofi Asare",
+        "Abena Boateng",
+        "Kojo Addo",
+        "Efua Nyarko",
+        "Yaw Ofori",
+        "Akosua Badu"
+    };
+
+    private static final String[] AUTO_DRIVER_PHONES = {
+        "0551002001",
+        "0551002002",
+        "0551002003",
+        "0551002004",
+        "0551002005",
+        "0551002006",
+        "0551002007",
+        "0551002008"
+    };
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -29,7 +50,6 @@ public class OrderRoutes implements HttpHandler {
         String path = exchange.getRequestURI().getPath();
         String query = exchange.getRequestURI().getQuery();
 
-        // GET /api/orders/history?email=X - Returns all orders for a user with items and tracking status
         if (method.equalsIgnoreCase("GET") && path.contains("/history")) {
             String email = query != null ? extractEmailFromQuery(query) : "";
             if (!email.isEmpty()) {
@@ -84,7 +104,6 @@ public class OrderRoutes implements HttpHandler {
         return 0;
     }
 
-    // ---- GET ALL ORDERS ----
     private void getAllOrders(HttpExchange exchange) throws IOException {
         Connection conn = DatabaseConnection.getConnection();
 
@@ -95,13 +114,9 @@ public class OrderRoutes implements HttpHandler {
 
         try {
             DatabaseMetaData meta = conn.getMetaData();
-            boolean hasDriverColumns = false;
-            try (ResultSet columns = meta.getColumns(null, null, "orders", "driver_name")) {
-                hasDriverColumns = columns.next();
-            } catch (SQLException e) {
-                hasDriverColumns = false;
-            }
-            
+            boolean hasDriverColumns = hasColumn(meta, "orders", "driver_name")
+                && hasColumn(meta, "orders", "driver_phone");
+
             String driverCols = hasDriverColumns ? ", driver_name, driver_phone" : "";
             String sql = "SELECT *" + driverCols + " FROM orders ORDER BY created_at DESC";
             PreparedStatement stmt = conn.prepareStatement(sql);
@@ -112,7 +127,8 @@ public class OrderRoutes implements HttpHandler {
 
             while (rs.next()) {
                 if (!first) json.append(",");
-                String driverName = "", driverPhone = "";
+                String driverName = "";
+                String driverPhone = "";
                 if (hasDriverColumns) {
                     try { driverName = rs.getString("driver_name"); } catch (Exception e) { driverName = ""; }
                     try { driverPhone = rs.getString("driver_phone"); } catch (Exception e) { driverPhone = ""; }
@@ -127,7 +143,7 @@ public class OrderRoutes implements HttpHandler {
                     .append("\"status\":\"").append(escapeJson(rs.getString("status"))).append("\",")
                     .append("\"driver_name\":\"").append(escapeJson(driverName)).append("\",")
                     .append("\"driver_phone\":\"").append(escapeJson(driverPhone)).append("\",")
-                    .append("\"created_at\":\"").append(rs.getString("created_at")).append("\",")
+                    .append("\"created_at\":\"").append(escapeJson(rs.getString("created_at"))).append("\",")
                     .append("\"items\":").append(getOrderItemsJson(conn, orderId))
                     .append("}");
                 first = false;
@@ -137,13 +153,11 @@ public class OrderRoutes implements HttpHandler {
             Server.sendResponse(exchange, 200, json.toString());
 
         } catch (SQLException e) {
-            System.out.println("❌ Error fetching orders: " + e.getMessage());
+            System.out.println("Error fetching orders: " + e.getMessage());
             Server.sendResponse(exchange, 500, "{\"error\":\"Failed to fetch orders\"}");
         }
     }
 
-    // ---- GET ORDER HISTORY FOR A CUSTOMER ----
-    // GET /api/orders/history?email=X - Returns all orders for a user with items and tracking status
     private void getOrderHistory(HttpExchange exchange, String email) throws IOException {
         Connection conn = DatabaseConnection.getConnection();
         if (conn == null) {
@@ -152,34 +166,34 @@ public class OrderRoutes implements HttpHandler {
         }
 
         try {
-            // Get all orders for this customer email
             String sql = "SELECT * FROM orders WHERE customer_email = ? ORDER BY created_at DESC";
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setString(1, email);
             ResultSet rs = stmt.executeQuery();
 
-            StringBuilder json = new StringBuilder("{\"email\":\"").append(escapeJson(email)).append("\",\"orders\":[");
+            StringBuilder json = new StringBuilder("{\"email\":\"")
+                .append(escapeJson(email))
+                .append("\",\"orders\":[");
             boolean first = true;
 
             while (rs.next()) {
                 if (!first) json.append(",");
                 int orderId = rs.getInt("id");
-                
-                // Get tracking info if available
+
                 String trackingSql = "SELECT latitude, longitude, speed_kmh, heading, updated_at FROM delivery_tracking WHERE order_id = ?";
                 PreparedStatement trackingStmt = conn.prepareStatement(trackingSql);
                 trackingStmt.setInt(1, orderId);
                 ResultSet trackingRs = trackingStmt.executeQuery();
-                
+
                 String trackingJson = "null";
                 if (trackingRs.next()) {
-                    trackingJson = "{\"latitude\":" + trackingRs.getDouble("latitude") 
+                    trackingJson = "{\"latitude\":" + trackingRs.getDouble("latitude")
                         + ",\"longitude\":" + trackingRs.getDouble("longitude")
                         + ",\"speed_kmh\":" + trackingRs.getDouble("speed_kmh")
                         + ",\"heading\":" + trackingRs.getInt("heading")
-                        + ",\"updated_at\":\"" + trackingRs.getString("updated_at") + "\"}";
+                        + ",\"updated_at\":\"" + escapeJson(trackingRs.getString("updated_at")) + "\"}";
                 }
-                
+
                 json.append("{")
                     .append("\"id\":").append(orderId).append(",")
                     .append("\"customer_name\":\"").append(escapeJson(rs.getString("customer_name"))).append("\",")
@@ -190,7 +204,7 @@ public class OrderRoutes implements HttpHandler {
                     .append("\"status\":\"").append(escapeJson(rs.getString("status"))).append("\",")
                     .append("\"driver_name\":\"").append(escapeJson(rs.getString("driver_name"))).append("\",")
                     .append("\"driver_phone\":\"").append(escapeJson(rs.getString("driver_phone"))).append("\",")
-                    .append("\"created_at\":\"").append(rs.getString("created_at")).append("\",")
+                    .append("\"created_at\":\"").append(escapeJson(rs.getString("created_at"))).append("\",")
                     .append("\"tracking\":").append(trackingJson).append(",")
                     .append("\"items\":").append(getOrderItemsJson(conn, orderId))
                     .append("}");
@@ -201,12 +215,11 @@ public class OrderRoutes implements HttpHandler {
             Server.sendResponse(exchange, 200, json.toString());
 
         } catch (SQLException e) {
-            System.out.println("❌ Error fetching order history: " + e.getMessage());
+            System.out.println("Error fetching order history: " + e.getMessage());
             Server.sendResponse(exchange, 500, "{\"error\":\"Failed to fetch order history\"}");
         }
     }
 
-    // ---- PLACE NEW ORDER ----
     private void placeOrder(HttpExchange exchange) throws IOException {
         Connection conn = DatabaseConnection.getConnection();
 
@@ -217,62 +230,93 @@ public class OrderRoutes implements HttpHandler {
 
         try {
             String body = Server.readRequestBody(exchange);
-            String customerName  = extractJsonValue(body, "customer_name");
+            String customerName = extractJsonValue(body, "customer_name");
             String customerEmail = extractJsonValue(body, "customer_email");
-            double total         = Double.parseDouble(extractJsonValue(body, "total"));
-            String phone         = extractJsonValue(body, "phone");
-            String address       = extractJsonValue(body, "address");
-            ensureOrderItemsTable(conn);
+            double total = Double.parseDouble(extractJsonValue(body, "total"));
+            String phone = extractJsonValue(body, "phone");
+            String address = extractJsonValue(body, "address");
 
-            // Try inserting with customer_email column (may not exist on old DBs)
-            String sql;
-            PreparedStatement stmt;
-            try {
-                sql  = "INSERT INTO orders (customer_name, customer_email, phone, address, total, status) VALUES (?, ?, ?, ?, ?, 'Confirmed')";
-                stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-                stmt.setString(1, customerName);
-                stmt.setString(2, customerEmail.isEmpty() ? null : customerEmail);
-                stmt.setString(3, phone);
-                stmt.setString(4, address);
-                stmt.setDouble(5, total);
-            } catch (SQLException ex) {
-                // Fallback: column doesn't exist yet
-                sql  = "INSERT INTO orders (customer_name, phone, address, total, status) VALUES (?, ?, ?, ?, 'Confirmed')";
-                stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-                stmt.setString(1, customerName);
-                stmt.setString(2, phone);
-                stmt.setString(3, address);
-                stmt.setDouble(4, total);
+            ensureOrderItemsTable(conn);
+            ensureDriverColumns(conn);
+
+            DriverAssignment autoDriver = generateDriverAssignment(customerName, phone, address);
+            DatabaseMetaData meta = conn.getMetaData();
+            boolean hasCustomerEmail = hasColumn(meta, "orders", "customer_email");
+            boolean hasDriverColumns = hasColumn(meta, "orders", "driver_name")
+                && hasColumn(meta, "orders", "driver_phone");
+
+            StringBuilder columns = new StringBuilder("customer_name, phone, address, total, status");
+            StringBuilder values = new StringBuilder("?, ?, ?, ?, ?");
+            List<Object> params = new ArrayList<>();
+            params.add(customerName);
+            params.add(phone);
+            params.add(address);
+            params.add(total);
+            params.add("Confirmed");
+
+            if (hasCustomerEmail) {
+                columns.insert("customer_name".length(), ", customer_email");
+                values.insert(1, "?, ");
+                params.add(1, customerEmail.isEmpty() ? null : customerEmail);
+            }
+
+            if (hasDriverColumns) {
+                columns.append(", driver_name, driver_phone");
+                values.append(", ?, ?");
+                params.add(autoDriver.name);
+                params.add(autoDriver.phone);
+            }
+
+            String sql = "INSERT INTO orders (" + columns + ") VALUES (" + values + ")";
+            PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            for (int i = 0; i < params.size(); i++) {
+                Object param = params.get(i);
+                int parameterIndex = i + 1;
+                if (param == null) {
+                    stmt.setNull(parameterIndex, Types.VARCHAR);
+                } else if (param instanceof Double) {
+                    stmt.setDouble(parameterIndex, (Double) param);
+                } else {
+                    stmt.setString(parameterIndex, String.valueOf(param));
+                }
             }
             stmt.executeUpdate();
 
             ResultSet keys = stmt.getGeneratedKeys();
             int newId = 0;
             if (keys.next()) newId = keys.getInt(1);
+
             insertOrderItems(conn, newId, body);
 
             System.out.println("===========================================");
-            System.out.println("📦 NEW ORDER RECEIVED!");
+            System.out.println("NEW ORDER RECEIVED");
             System.out.println("===========================================");
             System.out.println("Order ID: #" + newId);
             System.out.println("Customer: " + customerName);
             System.out.println("Email: " + (customerEmail.isEmpty() ? "N/A" : customerEmail));
             System.out.println("Phone: " + phone);
             System.out.println("Address: " + address);
-            System.out.println("Total: GH₵" + total);
+            System.out.println("Auto-assigned driver: " + autoDriver.name + " (" + autoDriver.phone + ")");
+            System.out.println("Total: GHc " + total);
             System.out.println("Time: " + new java.util.Date());
             System.out.println("===========================================\n");
 
-            String response = "{\"message\":\"Order placed!\",\"orderId\":" + newId + ",\"status\":\"Confirmed\"}";
+            String response = "{"
+                + "\"message\":\"Order placed!\","
+                + "\"orderId\":" + newId + ","
+                + "\"status\":\"Confirmed\","
+                + "\"driver_name\":\"" + escapeJson(autoDriver.name) + "\","
+                + "\"driver_phone\":\"" + escapeJson(autoDriver.phone) + "\","
+                + "\"tracking_history_enabled\":true"
+                + "}";
             Server.sendResponse(exchange, 201, response);
 
         } catch (Exception e) {
-            System.out.println("❌ Error placing order: " + e.getMessage());
+            System.out.println("Error placing order: " + e.getMessage());
             Server.sendResponse(exchange, 500, "{\"error\":\"Failed to place order\"}");
         }
     }
 
-    // ---- ASSIGN DRIVER TO ORDER ----
     private void assignDriver(HttpExchange exchange, int orderId) throws IOException {
         Connection conn = DatabaseConnection.getConnection();
 
@@ -282,15 +326,10 @@ public class OrderRoutes implements HttpHandler {
         }
 
         try {
-            // Check if columns exist
             DatabaseMetaData meta = conn.getMetaData();
-            boolean hasDriverColumns = false;
-            try (ResultSet columns = meta.getColumns(null, null, "orders", "driver_name")) {
-                hasDriverColumns = columns.next();
-            } catch (SQLException e) {
-                hasDriverColumns = false;
-            }
-            
+            boolean hasDriverColumns = hasColumn(meta, "orders", "driver_name")
+                && hasColumn(meta, "orders", "driver_phone");
+
             if (!hasDriverColumns) {
                 Server.sendResponse(exchange, 400, "{\"error\":\"Driver columns not found in database. Please run database upgrade.\"}");
                 return;
@@ -313,26 +352,25 @@ public class OrderRoutes implements HttpHandler {
                 statusStmt.setInt(1, orderId);
                 statusStmt.executeUpdate();
 
-                System.out.println("🚗 Driver assigned to Order #" + orderId + ": " + driverName + " (" + driverPhone + ")");
+                System.out.println("Driver assigned to Order #" + orderId + ": " + driverName + " (" + driverPhone + ")");
 
-                // Send "driver assigned" email to customer (async, non-blocking)
                 try {
                     String emailSql = "SELECT customer_name, customer_email, address FROM orders WHERE id = ?";
                     PreparedStatement emailStmt = conn.prepareStatement(emailSql);
                     emailStmt.setInt(1, orderId);
                     ResultSet emailRs = emailStmt.executeQuery();
                     if (emailRs.next()) {
-                        final String custName  = emailRs.getString("customer_name");
+                        final String custName = emailRs.getString("customer_name");
                         final String custEmail = emailRs.getString("customer_email");
-                        final String custAddr  = emailRs.getString("address");
-                        final String drName    = driverName;
-                        final String drPhone   = driverPhone;
-                        final int    oId       = orderId;
+                        final String custAddr = emailRs.getString("address");
+                        final String drName = driverName;
+                        final String drPhone = driverPhone;
+                        final int oId = orderId;
                         new Thread(() -> EmailService.sendDriverAssignedEmail(
                             custEmail, custName, oId, drName, drPhone, custAddr)).start();
                     }
                 } catch (Exception emailEx) {
-                    System.out.println("⚠️ Could not send driver-assigned email: " + emailEx.getMessage());
+                    System.out.println("Could not send driver-assigned email: " + emailEx.getMessage());
                 }
 
                 Server.sendResponse(exchange, 200, "{\"message\":\"Driver assigned successfully\"}");
@@ -341,12 +379,11 @@ public class OrderRoutes implements HttpHandler {
             }
 
         } catch (Exception e) {
-            System.out.println("❌ Error assigning driver: " + e.getMessage());
+            System.out.println("Error assigning driver: " + e.getMessage());
             Server.sendResponse(exchange, 500, "{\"error\":\"Failed to assign driver\"}");
         }
     }
 
-    // ---- UPDATE ORDER STATUS ----
     private void updateOrderStatus(HttpExchange exchange, int orderId) throws IOException {
         Connection conn = DatabaseConnection.getConnection();
 
@@ -366,9 +403,8 @@ public class OrderRoutes implements HttpHandler {
             int rows = stmt.executeUpdate();
 
             if (rows > 0) {
-                System.out.println("📋 Order #" + orderId + " status updated to: " + newStatus);
+                System.out.println("Order #" + orderId + " status updated to: " + newStatus);
 
-                // If delivered, send confirmation email to customer
                 if ("Delivered".equalsIgnoreCase(newStatus)) {
                     try {
                         String emailSql = "SELECT customer_name, customer_email, address, total, driver_name FROM orders WHERE id = ?";
@@ -376,27 +412,27 @@ public class OrderRoutes implements HttpHandler {
                         emailStmt.setInt(1, orderId);
                         ResultSet emailRs = emailStmt.executeQuery();
                         if (emailRs.next()) {
-                            final String custName  = emailRs.getString("customer_name");
+                            final String custName = emailRs.getString("customer_name");
                             final String custEmail = emailRs.getString("customer_email");
-                            final String custAddr  = emailRs.getString("address");
-                            final double total     = emailRs.getDouble("total");
-                            final String drName    = emailRs.getString("driver_name");
-                            final int    oId       = orderId;
+                            final String custAddr = emailRs.getString("address");
+                            final double orderTotal = emailRs.getDouble("total");
+                            final String drName = emailRs.getString("driver_name");
+                            final int oId = orderId;
                             new Thread(() -> EmailService.sendDeliveryConfirmation(
-                                custEmail, custName, oId, total, drName, custAddr)).start();
+                                custEmail, custName, oId, orderTotal, drName, custAddr)).start();
                         }
                     } catch (Exception emailEx) {
-                        System.out.println("⚠️ Could not send delivery email: " + emailEx.getMessage());
+                        System.out.println("Could not send delivery email: " + emailEx.getMessage());
                     }
                 }
 
-                Server.sendResponse(exchange, 200, "{\"message\":\"Status updated to " + newStatus + "\"}");
+                Server.sendResponse(exchange, 200, "{\"message\":\"Status updated to " + escapeJson(newStatus) + "\"}");
             } else {
                 Server.sendResponse(exchange, 404, "{\"error\":\"Order not found\"}");
             }
 
         } catch (Exception e) {
-            System.out.println("❌ Error updating status: " + e.getMessage());
+            System.out.println("Error updating status: " + e.getMessage());
             Server.sendResponse(exchange, 500, "{\"error\":\"Failed to update status\"}");
         }
     }
@@ -418,7 +454,8 @@ public class OrderRoutes implements HttpHandler {
         int start = json.indexOf("\"", colonIndex + 1) + 1;
         int end = json.indexOf("\"", start);
         if (start == 0 || start < colonIndex) {
-            String numStr = json.substring(colonIndex + 1).replaceAll("[^0-9.]", "");
+            String numStr = json.substring(colonIndex + 1).replaceAll("[^0-9.\\-]", "");
+            if (numStr.isEmpty()) return "";
             return numStr.split(",")[0].split("}")[0].trim();
         }
         return json.substring(start, end);
@@ -437,8 +474,39 @@ public class OrderRoutes implements HttpHandler {
                 ")";
             conn.prepareStatement(createSql).execute();
         } catch (SQLException e) {
-            System.out.println("⚠️ Could not ensure order_items table: " + e.getMessage());
+            System.out.println("Could not ensure order_items table: " + e.getMessage());
         }
+    }
+
+    private void ensureDriverColumns(Connection conn) {
+        try {
+            DatabaseMetaData meta = conn.getMetaData();
+            if (!hasColumn(meta, "orders", "driver_name")) {
+                conn.prepareStatement("ALTER TABLE orders ADD COLUMN driver_name VARCHAR(100)").execute();
+            }
+            if (!hasColumn(meta, "orders", "driver_phone")) {
+                conn.prepareStatement("ALTER TABLE orders ADD COLUMN driver_phone VARCHAR(20)").execute();
+            }
+        } catch (SQLException e) {
+            System.out.println("Could not ensure driver columns: " + e.getMessage());
+        }
+    }
+
+    private boolean hasColumn(DatabaseMetaData meta, String tableName, String columnName) {
+        try (ResultSet columns = meta.getColumns(null, null, tableName, columnName)) {
+            return columns.next();
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    private DriverAssignment generateDriverAssignment(String customerName, String phone, String address) {
+        String seedSource = String.valueOf(customerName) + "|" + phone + "|" + address + "|" + System.currentTimeMillis();
+        int index = Math.floorMod(seedSource.hashCode(), AUTO_DRIVER_NAMES.length);
+        return new DriverAssignment(
+            AUTO_DRIVER_NAMES[index],
+            AUTO_DRIVER_PHONES[index % AUTO_DRIVER_PHONES.length]
+        );
     }
 
     private void insertOrderItems(Connection conn, int orderId, String body) {
@@ -459,10 +527,10 @@ public class OrderRoutes implements HttpHandler {
             }
             if (inserted > 0) {
                 stmt.executeBatch();
-                System.out.println("🧾 Saved " + inserted + " item(s) for Order #" + orderId);
+                System.out.println("Saved " + inserted + " item(s) for Order #" + orderId);
             }
         } catch (SQLException e) {
-            System.out.println("⚠️ Could not save order items for Order #" + orderId + ": " + e.getMessage());
+            System.out.println("Could not save order items for Order #" + orderId + ": " + e.getMessage());
         }
     }
 
@@ -519,7 +587,11 @@ public class OrderRoutes implements HttpHandler {
                 break;
             }
         }
-        try { return Double.parseDouble(num.toString()); } catch (Exception e) { return 0.0; }
+        try {
+            return Double.parseDouble(num.toString());
+        } catch (Exception e) {
+            return 0.0;
+        }
     }
 
     private String getOrderItemsJson(Connection conn, int orderId) {
@@ -558,6 +630,16 @@ public class OrderRoutes implements HttpHandler {
             this.foodId = foodId;
             this.quantity = quantity;
             this.price = price;
+        }
+    }
+
+    private static class DriverAssignment {
+        final String name;
+        final String phone;
+
+        DriverAssignment(String name, String phone) {
+            this.name = name;
+            this.phone = phone;
         }
     }
 }
