@@ -132,6 +132,10 @@ body {
   transition: background 0.35s ease, color 0.35s ease;
 }
 
+body.auth-locked {
+  overflow: hidden;
+}
+
 body::before {
   content: '';
   position: fixed;
@@ -364,6 +368,81 @@ body::before {
 .mobile-drawer-primary:hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+}
+
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 350;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background:
+    radial-gradient(circle at top, rgba(255,92,26,0.16), transparent 40%),
+    rgba(7, 7, 7, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.auth-gate.open {
+  display: flex;
+}
+
+.auth-gate-card {
+  width: min(100%, 520px);
+  background: linear-gradient(180deg, rgba(24,24,24,0.98), rgba(10,10,10,0.98));
+  border: 1px solid rgba(255,92,26,0.22);
+  border-radius: 28px;
+  padding: 2rem;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+  text-align: center;
+}
+
+.auth-gate-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255,92,26,0.14);
+  border: 1px solid rgba(255,92,26,0.28);
+  color: var(--accent2);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-gate-card h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.05;
+  margin: 1rem 0 0.9rem;
+}
+
+.auth-gate-card p {
+  color: var(--muted2);
+  font-size: 0.96rem;
+  line-height: 1.7;
+}
+
+.auth-gate-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.auth-gate-outline {
+  color: var(--text);
+  border-color: var(--border2);
+}
+
+.auth-gate-outline:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* ---------- HERO ---------- */
@@ -1406,6 +1485,29 @@ body::before {
   text-decoration: underline;
 }
 
+.password-hint {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.auth-feedback {
+  min-height: 1.2rem;
+  margin: -0.2rem 0 0.75rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.auth-feedback.error {
+  color: var(--error);
+}
+
+.auth-feedback.success {
+  color: var(--success);
+}
+
 /* ---------- FOOTER ---------- */
 footer {
   border-top: 1px solid var(--border);
@@ -1643,6 +1745,17 @@ footer {
 }
 
 @media (max-width: 640px) {
+  .auth-gate-card {
+    padding: 1.5rem 1.15rem;
+    border-radius: 22px;
+  }
+  .auth-gate-actions {
+    flex-direction: column;
+  }
+  .auth-gate-actions .btn-primary,
+  .auth-gate-actions .btn-outline {
+    width: 100%;
+  }
   .hero { padding-left: 1rem; padding-right: 1rem; }
   .offers-section,
   .categories-section,

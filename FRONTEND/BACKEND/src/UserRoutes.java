@@ -43,7 +43,7 @@ public class UserRoutes implements HttpHandler {
         Connection conn = DatabaseConnection.getConnection();
 
         if (conn == null) {
-            Server.sendResponse(exchange, 500, "{\"error\":\"Database not connected\"}");
+            Server.sendResponse(exchange, 500, "{\"error\":\"Database not connected. Please try again later.\"}");
             return;
         }
 
@@ -54,36 +54,65 @@ public class UserRoutes implements HttpHandler {
             String phone = extractJsonValue(body, "phone");
             String password = extractJsonValue(body, "password");
 
-            // Check if user already exists (by email)
-            String checkSql = "SELECT id FROM users WHERE email = ?";
-            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
-            checkStmt.setString(1, email);
-            ResultSet rs = checkStmt.executeQuery();
-
-            if (rs.next()) {
-                Server.sendResponse(exchange, 400, "{\"error\":\"Email already exists\"}");
+            // Validate required fields
+            if (name == null || name.trim().isEmpty()) {
+                Server.sendResponse(exchange, 400, "{\"error\":\"Please enter your full name.\"}");
+                return;
+            }
+            if (email == null || email.trim().isEmpty()) {
+                Server.sendResponse(exchange, 400, "{\"error\":\"Please enter your email address.\"}");
+                return;
+            }
+            if (password == null || password.isEmpty()) {
+                Server.sendResponse(exchange, 400, "{\"error\":\"Please create a password.\"}");
                 return;
             }
 
-            // Insert new user
+            // Validate password strength
+            if (!PasswordHasher.isStrongPassword(password)) {
+                Server.sendResponse(exchange, 400, "{\"error\":\"Password must be at least 8 characters with uppercase, lowercase, a number, and special character.\"}");
+                return;
+            }
+
+            // Validate email format
+            if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                Server.sendResponse(exchange, 400, "{\"error\":\"Please enter a valid email address.\"}");
+                return;
+            }
+
+            // Check if user already exists (by email)
+            String checkSql = "SELECT id FROM users WHERE email = ?";
+            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+            checkStmt.setString(1, email.trim().toLowerCase());
+            ResultSet rs = checkStmt.executeQuery();
+
+            if (rs.next()) {
+                Server.sendResponse(exchange, 409, "{\"error\":\"An account with this email already exists. Please sign in instead.\"}");
+                return;
+            }
+
+            // Hash the password professionally
+            String hashedPassword = PasswordHasher.hashPassword(password);
+
+            // Insert new user with hashed password
             String sql = "INSERT INTO users (name, email, phone, password) VALUES (?, ?, ?, ?)";
             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            stmt.setString(1, name);
-            stmt.setString(2, email);
-            stmt.setString(3, phone);
-            stmt.setString(4, password);
+            stmt.setString(1, name.trim());
+            stmt.setString(2, email.trim().toLowerCase());
+            stmt.setString(3, phone != null ? phone.trim() : "");
+            stmt.setString(4, hashedPassword);
             stmt.executeUpdate();
 
             ResultSet keys = stmt.getGeneratedKeys();
             int newId = 0;
             if (keys.next()) newId = keys.getInt(1);
 
-            String response = "{\"message\":\"Registration successful!\",\"userId\":" + newId + "}";
+            String response = "{\"message\":\"Account created successfully! Please sign in to continue.\",\"userId\":" + newId + "}";
             Server.sendResponse(exchange, 201, response);
 
         } catch (Exception e) {
             System.out.println("❌ Error registering user: " + e.getMessage());
-            Server.sendResponse(exchange, 500, "{\"error\":\"Failed to register user\"}");
+            Server.sendResponse(exchange, 500, "{\"error\":\"Failed to create account. Please try again later.\"}");
         }
     }
 
@@ -92,7 +121,7 @@ public class UserRoutes implements HttpHandler {
         Connection conn = DatabaseConnection.getConnection();
 
         if (conn == null) {
-            Server.sendResponse(exchange, 500, "{\"error\":\"Database not connected\"}");
+            Server.sendResponse(exchange, 500, "{\"error\":\"Database not connected. Please try again later.\"}");
             return;
         }
 
@@ -101,39 +130,72 @@ public class UserRoutes implements HttpHandler {
             String email = extractJsonValue(body, "email");
             String password = extractJsonValue(body, "password");
 
-            String sql = "SELECT id, name FROM users WHERE email = ? AND password = ?";
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setString(1, email);
-            stmt.setString(2, password);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                int userId = rs.getInt("id");
-                String name = rs.getString("name");
-                String response = "{\"message\":\"Login successful!\",\"userId\":" + userId + ",\"name\":\"" + name + "\"}";
-                Server.sendResponse(exchange, 200, response);
-            } else {
-                Server.sendResponse(exchange, 401, "{\"error\":\"Invalid credentials\"}");
+            // Validate required fields
+            if (email == null || email.trim().isEmpty()) {
+                Server.sendResponse(exchange, 400, "{\"error\":\"Please enter your email address.\"}");
+                return;
             }
+            if (password == null || password.isEmpty()) {
+                Server.sendResponse(exchange, 400, "{\"error\":\"Please enter your password.\"}");
+                return;
+            }
+
+            // Find user by email
+            String checkSql = "SELECT id, name, password FROM users WHERE LOWER(email) = ?";
+            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+            checkStmt.setString(1, email.trim().toLowerCase());
+            ResultSet checkRs = checkStmt.executeQuery();
+
+            if (!checkRs.next()) {
+                // Email not found - provide helpful message
+                Server.sendResponse(exchange, 401, "{\"error\":\"No account found with this email. Please create an account to get started.\"}");
+                return;
+            }
+
+            // Email exists, verify password (supports both old and new hash formats)
+            String storedPassword = checkRs.getString("password");
+            boolean passwordValid = false;
+            
+            // Check if it's the new format (contains $)
+            if (storedPassword != null && storedPassword.contains("$")) {
+                passwordValid = PasswordHasher.verifyPassword(password, storedPassword);
+            } else {
+                // Fallback for old plain text passwords
+                passwordValid = password.equals(storedPassword);
+            }
+            
+            if (!passwordValid) {
+                Server.sendResponse(exchange, 401, "{\"error\":\"Incorrect password. Please try again or use 'Forgot Password' to reset.\"}");
+                return;
+            }
+
+            // Login successful
+            int userId = checkRs.getInt("id");
+            String name = checkRs.getString("name");
+            String response = "{\"message\":\"Welcome back! Sign in successful.\",\"userId\":" + userId + ",\"name\":\"" + name + "\"}";
+            Server.sendResponse(exchange, 200, response);
 
         } catch (Exception e) {
             System.out.println("❌ Error logging in: " + e.getMessage());
-            Server.sendResponse(exchange, 500, "{\"error\":\"Failed to login\"}");
+            Server.sendResponse(exchange, 500, "{\"error\":\"Unable to sign in right now. Please try again later.\"}");
         }
     }
 
     // ---- SIMPLE JSON VALUE EXTRACTOR ----
     private String extractJsonValue(String json, String key) {
+        if (json == null || json.isEmpty()) return "";
         String searchKey = "\"" + key + "\"";
         int keyIndex = json.indexOf(searchKey);
         if (keyIndex == -1) return "";
         int colonIndex = json.indexOf(":", keyIndex);
+        if (colonIndex == -1) return "";
         int start = json.indexOf("\"", colonIndex + 1) + 1;
         int end = json.indexOf("\"", start);
         if (start == 0 || start < colonIndex) {
             String numStr = json.substring(colonIndex + 1).replaceAll("[^0-9.]", "");
             return numStr.split(",")[0].split("}")[0].trim();
         }
+        if (end == -1) end = json.length();
         return json.substring(start, end);
     }
 }

@@ -118,6 +118,14 @@ let reviewItemId = null;
 let deliveryFee = 5;
 let trackedOrdersHistory = [];
 
+const PASSWORD_RULES = {
+  minLength: 8,
+  upper: /[A-Z]/,
+  lower: /[a-z]/,
+  digit: /\d/,
+  special: /[^A-Za-z0-9]/
+};
+
 // ---------- THEME TOGGLE ----------
 function toggleTheme() {
   const body = document.body;
@@ -155,6 +163,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderOrders();
   updateAuthUI();
   updateWishlistUI();
+  enforceAuthState();
   checkAdminLogin(); // Check admin login status
   loadAllOrdersAdmin(); // Load admin orders
 
@@ -432,6 +441,8 @@ function applyFilters() {
 
 // ---------- CART ----------
 function addToCart(itemId) {
+  if (!requireAuth('Please sign in before adding items to your cart.')) return;
+
   const item = menuData.find(i => i.id === itemId);
   if (!item) return;
 
@@ -538,6 +549,8 @@ function updateCartUI() {
 }
 
 function toggleCart() {
+  if (!requireAuth('Please sign in to view your cart.')) return;
+
   const sidebar = document.getElementById('cartSidebar');
   const overlay = document.getElementById('cartOverlay');
   // Close wishlist if open
@@ -585,6 +598,8 @@ function applyPromoFromCart() {
 
 // ---------- WISHLIST ----------
 function toggleWishlistItem(itemId) {
+  if (!requireAuth('Please sign in to save favourites.')) return;
+
   const item = menuData.find(i => i.id === itemId);
   if (!item) return;
 
@@ -626,6 +641,8 @@ function updateWishlistUI() {
 }
 
 function toggleWishlist() {
+  if (!requireAuth('Please sign in to view your favourites.')) return;
+
   const sidebar = document.getElementById('wishlistSidebar');
   const overlay = document.getElementById('wishlistOverlay');
   if (document.getElementById('cartSidebar').classList.contains('open')) {
@@ -638,6 +655,8 @@ function toggleWishlist() {
 
 // ---------- CHECKOUT & ORDER ----------
 function initiateCheckout() {
+  if (!requireAuth('Please sign in before placing an order.')) return;
+
   if (cart.length === 0) return;
 
   // Prefill name if logged in
@@ -1419,13 +1438,24 @@ function submitReview() {
 
 // ---------- AUTH ----------
 async function login() {
-  const email    = document.getElementById('loginEmail').value.trim();
+  const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
+  setAuthFeedback('loginFeedback', '');
 
-  if (!email || !password) { showToast('⚠️ Please fill in all fields'); return; }
+  if (!email || !password) {
+    const message = 'Please fill in all fields.';
+    setAuthFeedback('loginFeedback', message, true);
+    showToast(`Warning: ${message}`);
+    return;
+  }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) { showToast('⚠️ Invalid email address'); return; }
+  if (!emailRegex.test(email)) {
+    const message = 'Enter a valid email address.';
+    setAuthFeedback('loginFeedback', message, true);
+    showToast(`Warning: ${message}`);
+    return;
+  }
 
   try {
     const res = await fetch(`${API_BASE}/users/login`, {
@@ -1433,31 +1463,72 @@ async function login() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
-    if (res.ok) {
-      const result = await res.json();
-      currentUser = { name: result.name || email.split('@')[0], email, phone: result.phone || '' };
-    } else {
-      throw new Error('Backend unavailable');
+
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const message = result.error || 'Unable to sign in right now.';
+      setAuthFeedback('loginFeedback', message, true);
+      showToast(`Sign in failed: ${message}`);
+      return;
     }
+
+    currentUser = {
+      id: result.userId || null,
+      name: result.name || email.split('@')[0],
+      email: result.email || email,
+      phone: result.phone || ''
+    };
   } catch (_) {
-    // Demo fallback
-    currentUser = { name: email.split('@')[0], email, phone: '' };
+    const message = 'Sign in failed. Please try again in a moment.';
+    setAuthFeedback('loginFeedback', message, true);
+    showToast(message);
+    return;
   }
 
   saveState();
   updateAuthUI();
-  showToast(`✅ Welcome back, ${currentUser.name}!`);
+  enforceAuthState();
+  clearAuthForms();
+  showToast(`Welcome back, ${currentUser.name}!`);
   closeModal('loginModal');
 }
 
 async function register() {
-  const name     = document.getElementById('regName').value.trim();
-  const email    = document.getElementById('regEmail').value.trim();
-  const phone    = document.getElementById('regPhone').value.trim();
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const phone = document.getElementById('regPhone').value.trim();
   const password = document.getElementById('regPassword').value;
+  const confirmPassword = document.getElementById('regConfirmPassword').value;
+  setAuthFeedback('registerFeedback', '');
 
-  if (!name || !email || !password) { showToast('⚠️ Please fill in all required fields'); return; }
-  if (password.length < 6) { showToast('⚠️ Password must be at least 6 characters'); return; }
+  if (!name || !email || !password || !confirmPassword) {
+    const message = 'Please fill in all required fields.';
+    setAuthFeedback('registerFeedback', message, true);
+    showToast(`Warning: ${message}`);
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    const message = 'Enter a valid email address.';
+    setAuthFeedback('registerFeedback', message, true);
+    showToast(`Warning: ${message}`);
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    const message = 'Passwords do not match.';
+    setAuthFeedback('registerFeedback', message, true);
+    showToast(`Warning: ${message}`);
+    return;
+  }
+
+  const passwordCheck = validatePassword(password);
+  if (!passwordCheck.valid) {
+    setAuthFeedback('registerFeedback', passwordCheck.message, true);
+    showToast(`Warning: ${passwordCheck.message}`);
+    return;
+  }
 
   try {
     const res = await fetch(`${API_BASE}/users/register`, {
@@ -1465,10 +1536,26 @@ async function register() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, phone, password })
     });
-    if (!res.ok) throw new Error();
-  } catch (_) { /* fallback */ }
 
-  showToast(`🎉 Account created! Welcome, ${name}!`);
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const message = result.error || 'Unable to create your account.';
+      setAuthFeedback('registerFeedback', message, true);
+      showToast(`Registration failed: ${message}`);
+      return;
+    }
+  } catch (_) {
+    const message = 'Registration failed. Please try again in a moment.';
+    setAuthFeedback('registerFeedback', message, true);
+    showToast(message);
+    return;
+  }
+
+  setAuthFeedback('registerFeedback', 'Account created successfully. Sign in to continue.');
+  document.getElementById('loginEmail').value = email;
+  document.getElementById('loginPassword').value = '';
+  clearRegisterForm();
+  showToast(`Account created for ${name}. Please sign in.`);
   closeModal('registerModal');
   showModal('loginModal');
 }
@@ -1477,20 +1564,90 @@ function logout() {
   currentUser = null;
   saveState();
   updateAuthUI();
-  showToast('👋 You have been signed out');
+  enforceAuthState();
+  showToast('You have been signed out.');
 }
 
 function updateAuthUI() {
   const authBtn = document.getElementById('authBtn');
   if (currentUser) {
     authBtn.innerHTML = `
-      <span class="user-name">👤 ${currentUser.name}</span>
+      <span class="user-name">Account: ${currentUser.name}</span>
       <button class="btn-signin" onclick="logout()">Sign Out</button>`;
   } else {
     authBtn.innerHTML = `<button class="btn-signin" onclick="showModal('loginModal')">Sign In</button>`;
   }
 }
 
+function enforceAuthState() {
+  const gate = document.getElementById('authGate');
+  const isLoggedIn = Boolean(currentUser);
+
+  document.body.classList.toggle('auth-locked', !isLoggedIn);
+  if (gate) gate.classList.toggle('open', !isLoggedIn);
+
+  if (!isLoggedIn) {
+    closeProtectedPanels();
+  }
+}
+
+function closeProtectedPanels() {
+  ['cartSidebar', 'wishlistSidebar', 'cartOverlay', 'wishlistOverlay'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+  });
+}
+
+function requireAuth(message = 'Please sign in to continue.') {
+  if (currentUser) return true;
+  showToast(message);
+  showModal('loginModal');
+  return false;
+}
+
+function validatePassword(password) {
+  if (password.length < PASSWORD_RULES.minLength) {
+    return { valid: false, message: 'Password must be at least 8 characters long.' };
+  }
+  if (!PASSWORD_RULES.upper.test(password)) {
+    return { valid: false, message: 'Password must include at least one uppercase letter.' };
+  }
+  if (!PASSWORD_RULES.lower.test(password)) {
+    return { valid: false, message: 'Password must include at least one lowercase letter.' };
+  }
+  if (!PASSWORD_RULES.digit.test(password)) {
+    return { valid: false, message: 'Password must include at least one number.' };
+  }
+  if (!PASSWORD_RULES.special.test(password)) {
+    return { valid: false, message: 'Password must include at least one special character.' };
+  }
+  return { valid: true, message: '' };
+}
+
+function setAuthFeedback(id, message, isError = false) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = message || '';
+  el.classList.toggle('error', Boolean(message) && isError);
+  el.classList.toggle('success', Boolean(message) && !isError);
+}
+
+function clearRegisterForm() {
+  ['regName', 'regEmail', 'regPhone', 'regPassword', 'regConfirmPassword'].forEach((id) => {
+    const input = document.getElementById(id);
+    if (input) input.value = '';
+  });
+}
+
+function clearAuthForms() {
+  ['loginEmail', 'loginPassword'].forEach((id) => {
+    const input = document.getElementById(id);
+    if (input) input.value = '';
+  });
+  clearRegisterForm();
+  setAuthFeedback('loginFeedback', '');
+  setAuthFeedback('registerFeedback', '');
+}
 // ---------- MODAL HELPERS ----------
 function showModal(id) {
   document.getElementById(id).classList.add('open');
