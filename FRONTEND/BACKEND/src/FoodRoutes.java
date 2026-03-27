@@ -8,7 +8,10 @@
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import java.io.IOException;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class FoodRoutes implements HttpHandler {
 
@@ -45,12 +48,10 @@ public class FoodRoutes implements HttpHandler {
         }
 
         try {
-            // SQL query to fetch all food items
             String sql = "SELECT * FROM foods ORDER BY id ASC";
             PreparedStatement stmt = conn.prepareStatement(sql);
             ResultSet rs = stmt.executeQuery();
 
-            // Build a JSON array manually from the results
             StringBuilder json = new StringBuilder("[");
             boolean first = true;
 
@@ -58,25 +59,33 @@ public class FoodRoutes implements HttpHandler {
                 if (!first) json.append(",");
                 json.append("{")
                     .append("\"id\":").append(rs.getInt("id")).append(",")
-                    .append("\"name\":\"").append(rs.getString("name")).append("\",")
-                    .append("\"description\":\"").append(rs.getString("description")).append("\",")
+                    .append("\"name\":\"").append(escapeJson(rs.getString("name"))).append("\",")
+                    .append("\"description\":\"").append(escapeJson(rs.getString("description"))).append("\",")
                     .append("\"price\":").append(rs.getDouble("price")).append(",")
-                    .append("\"emoji\":\"").append(rs.getString("emoji")).append("\",")
-                    .append("\"category\":\"").append(rs.getString("category")).append("\",")
+                    .append("\"emoji\":\"").append(escapeJson(rs.getString("emoji"))).append("\",")
+                    .append("\"category\":\"").append(escapeJson(rs.getString("category"))).append("\",")
                     .append("\"rating\":").append(rs.getDouble("rating")).append(",")
                     .append("\"reviews\":0,")
-                    .append("\"badge\":").append(rs.getString("badge") == null ? "null" : "\"" + rs.getString("badge") + "\"")
+                    .append("\"badge\":").append(rs.getString("badge") == null ? "null" : "\"" + escapeJson(rs.getString("badge")) + "\"")
                     .append("}");
                 first = false;
             }
 
             json.append("]");
-
             Server.sendResponse(exchange, 200, json.toString());
 
         } catch (SQLException e) {
-            System.out.println("❌ Error fetching foods: " + e.getMessage());
+            System.out.println("Error fetching foods: " + e.getMessage());
             Server.sendResponse(exchange, 500, "{\"error\":\"Failed to fetch food items\"}");
         }
+    }
+
+    private String escapeJson(String value) {
+        if (value == null) return "";
+        return value.replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n")
+                    .replace("\r", "\\r")
+                    .replace("\t", "\\t");
     }
 }
