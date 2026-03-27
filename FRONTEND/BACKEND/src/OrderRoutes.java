@@ -7,6 +7,7 @@
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class OrderRoutes implements HttpHandler {
+    private static final SecureRandom CODE_RANDOM = new SecureRandom();
     private static final String[] AUTO_DRIVER_NAMES = {
         "Kwame Mensah",
         "Ama Owusu",
@@ -307,7 +309,8 @@ public class OrderRoutes implements HttpHandler {
                 + "\"status\":\"Confirmed\","
                 + "\"driver_name\":\"" + escapeJson(autoDriver.name) + "\","
                 + "\"driver_phone\":\"" + escapeJson(autoDriver.phone) + "\","
-                + "\"tracking_history_enabled\":true"
+                + "\"tracking_history_enabled\":true,"
+                + "\"items\":" + getOrderItemsJson(conn, newId)
                 + "}";
             Server.sendResponse(exchange, 201, response);
 
@@ -467,14 +470,27 @@ public class OrderRoutes implements HttpHandler {
                 "id INT AUTO_INCREMENT PRIMARY KEY," +
                 "order_id INT NOT NULL," +
                 "food_id INT NOT NULL," +
+                "item_code VARCHAR(32) UNIQUE," +
                 "quantity INT NOT NULL DEFAULT 1," +
                 "price DECIMAL(10,2) NOT NULL," +
                 "FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE," +
                 "FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE" +
                 ")";
             conn.prepareStatement(createSql).execute();
+            ensureOrderItemCodeColumn(conn);
         } catch (SQLException e) {
             System.out.println("Could not ensure order_items table: " + e.getMessage());
+        }
+    }
+
+    private void ensureOrderItemCodeColumn(Connection conn) {
+        try {
+            DatabaseMetaData meta = conn.getMetaData();
+            if (!hasColumn(meta, "order_items", "item_code")) {
+                conn.prepareStatement("ALTER TABLE order_items ADD COLUMN item_code VARCHAR(32) UNIQUE").execute();
+            }
+        } catch (SQLException e) {
+            System.out.println("Could not ensure item_code column: " + e.getMessage());
         }
     }
 
@@ -513,15 +529,17 @@ public class OrderRoutes implements HttpHandler {
         List<OrderItemPayload> items = parseOrderItems(body);
         if (items.isEmpty()) return;
 
-        String sql = "INSERT INTO order_items (order_id, food_id, quantity, price) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO order_items (order_id, food_id, item_code, quantity, price) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             int inserted = 0;
             for (OrderItemPayload item : items) {
                 if (item.foodId <= 0 || item.quantity <= 0 || item.price < 0) continue;
+                String itemCode = generateUniqueItemCode(conn);
                 stmt.setInt(1, orderId);
                 stmt.setInt(2, item.foodId);
-                stmt.setInt(3, item.quantity);
-                stmt.setDouble(4, item.price);
+                stmt.setString(3, itemCode);
+                stmt.setInt(4, item.quantity);
+                stmt.setDouble(5, item.price);
                 stmt.addBatch();
                 inserted++;
             }
@@ -595,7 +613,7 @@ public class OrderRoutes implements HttpHandler {
     }
 
     private String getOrderItemsJson(Connection conn, int orderId) {
-        String sql = "SELECT oi.food_id, oi.quantity, oi.price, f.name, f.emoji " +
+        String sql = "SELECT oi.food_id, oi.item_code, oi.quantity, oi.price, f.name, f.emoji " +
                      "FROM order_items oi LEFT JOIN foods f ON oi.food_id = f.id " +
                      "WHERE oi.order_id = ? ORDER BY oi.id ASC";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -607,6 +625,7 @@ public class OrderRoutes implements HttpHandler {
                 if (!first) json.append(",");
                 json.append("{")
                     .append("\"id\":").append(rs.getInt("food_id")).append(",")
+                    .append("\"item_code\":\"").append(escapeJson(rs.getString("item_code"))).append("\",")
                     .append("\"name\":\"").append(escapeJson(rs.getString("name"))).append("\",")
                     .append("\"emoji\":\"").append(escapeJson(rs.getString("emoji"))).append("\",")
                     .append("\"qty\":").append(rs.getInt("quantity")).append(",")
@@ -619,6 +638,34 @@ public class OrderRoutes implements HttpHandler {
         } catch (SQLException e) {
             return "[]";
         }
+    }
+
+    private String generateUniqueItemCode(Connection conn) {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            String candidate = "QB-" + randomCodePart(6) + "-" + randomCodePart(6);
+            if (isItemCodeAvailable(conn, candidate)) return candidate;
+        }
+        return "QB-" + System.currentTimeMillis();
+    }
+
+    private boolean isItemCodeAvailable(Connection conn, String itemCode) {
+        String sql = "SELECT id FROM order_items WHERE item_code = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, itemCode);
+            ResultSet rs = stmt.executeQuery();
+            return !rs.next();
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    private String randomCodePart(int length) {
+        final String alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        StringBuilder code = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            code.append(alphabet.charAt(CODE_RANDOM.nextInt(alphabet.length())));
+        }
+        return code.toString();
     }
 
     private static class OrderItemPayload {

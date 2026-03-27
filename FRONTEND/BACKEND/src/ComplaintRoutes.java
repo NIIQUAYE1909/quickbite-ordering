@@ -24,19 +24,16 @@ public class ComplaintRoutes implements HttpHandler {
         String method = exchange.getRequestMethod();
         String path = exchange.getRequestURI().getPath();
 
-        // POST /api/complaints - Submit a new complaint
         if (method.equalsIgnoreCase("POST") && path.endsWith("/complaints")) {
             submitComplaint(exchange);
             return;
         }
 
-        // GET /api/complaints - Admin only, get all complaints
         if (method.equalsIgnoreCase("GET") && path.endsWith("/complaints")) {
             getAllComplaints(exchange);
             return;
         }
 
-        // PUT /api/complaints/{id}/status - Admin only, update complaint status
         if (method.equalsIgnoreCase("PUT") && path.matches(".*/api/complaints/\\d+/status.*")) {
             int complaintId = extractComplaintId(path);
             updateComplaintStatus(exchange, complaintId);
@@ -60,7 +57,6 @@ public class ComplaintRoutes implements HttpHandler {
         return 0;
     }
 
-    // ---- SUBMIT COMPLAINT ----
     private void submitComplaint(HttpExchange exchange) throws IOException {
         Connection conn = DatabaseConnection.getConnection();
 
@@ -70,16 +66,18 @@ public class ComplaintRoutes implements HttpHandler {
         }
 
         try {
-            // Ensure complaints table exists
             ensureComplaintsTable(conn);
 
             String body = Server.readRequestBody(exchange);
-            String orderId = extractJsonValue(body, "order_id");
             String customerName = extractJsonValue(body, "name");
             String customerEmail = extractJsonValue(body, "email");
+            String itemCode = extractJsonValue(body, "item_code").trim().toUpperCase();
             String message = extractJsonValue(body, "message");
 
-            // Validate required fields
+            if (itemCode.isEmpty()) {
+                Server.sendResponse(exchange, 400, "{\"error\":\"Enter the food reference code from your order.\"}");
+                return;
+            }
             if (message == null || message.trim().isEmpty()) {
                 Server.sendResponse(exchange, 400, "{\"error\":\"Please describe your concern.\"}");
                 return;
@@ -89,50 +87,44 @@ public class ComplaintRoutes implements HttpHandler {
                 return;
             }
 
-            // If order ID provided, validate it exists
-            int orderIdInt = 0;
-            if (orderId != null && !orderId.isEmpty()) {
-                try {
-                    orderIdInt = Integer.parseInt(orderId);
-                    // Verify order exists and belongs to this email
-                    String checkSql = "SELECT id FROM orders WHERE id = ? AND (customer_email = ? OR customer_email IS NULL)";
-                    PreparedStatement checkStmt = conn.prepareStatement(checkSql);
-                    checkStmt.setInt(1, orderIdInt);
-                    checkStmt.setString(2, customerEmail.trim().toLowerCase());
-                    ResultSet checkRs = checkStmt.executeQuery();
-                    if (!checkRs.next()) {
-                        orderIdInt = 0; // Reset if order not found or doesn't match
-                    }
-                } catch (Exception e) {
-                    orderIdInt = 0;
-                }
+            ComplaintLookup lookup = lookupComplaintItem(conn, itemCode, customerEmail.trim().toLowerCase());
+            if (lookup == null) {
+                Server.sendResponse(exchange, 404, "{\"error\":\"That food reference code was not found for this account.\"}");
+                return;
             }
 
-            // Insert complaint
-            String sql = "INSERT INTO complaints (order_id, customer_name, customer_email, message, status) VALUES (?, ?, ?, ?, 'pending')";
+            String sql = "INSERT INTO complaints (order_id, food_id, item_code, customer_name, customer_email, food_name, message, status) " +
+                         "VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')";
             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            stmt.setInt(1, orderIdInt);
-            stmt.setString(2, customerName != null ? customerName.trim() : "");
-            stmt.setString(3, customerEmail.trim().toLowerCase());
-            stmt.setString(4, message.trim());
+            stmt.setInt(1, lookup.orderId);
+            stmt.setInt(2, lookup.foodId);
+            stmt.setString(3, itemCode);
+            stmt.setString(4, !customerName.trim().isEmpty() ? customerName.trim() : lookup.customerName);
+            stmt.setString(5, customerEmail.trim().toLowerCase());
+            stmt.setString(6, lookup.foodName);
+            stmt.setString(7, message.trim());
             stmt.executeUpdate();
 
             ResultSet keys = stmt.getGeneratedKeys();
             int newId = 0;
             if (keys.next()) newId = keys.getInt(1);
 
-            System.out.println("📝 New complaint submitted! ID: " + newId + " from: " + customerEmail);
-
-            String response = "{\"message\":\"Your concern has been submitted. We will review it shortly.\",\"complaintId\":" + newId + "}";
+            String response = "{"
+                + "\"message\":\"Your concern has been submitted. We will review it shortly.\","
+                + "\"complaintId\":" + newId + ","
+                + "\"order_id\":" + lookup.orderId + ","
+                + "\"food_id\":" + lookup.foodId + ","
+                + "\"item_code\":\"" + escapeJson(itemCode) + "\","
+                + "\"food_name\":\"" + escapeJson(lookup.foodName) + "\""
+                + "}";
             Server.sendResponse(exchange, 201, response);
 
         } catch (Exception e) {
-            System.out.println("❌ Error submitting complaint: " + e.getMessage());
+            System.out.println("Error submitting complaint: " + e.getMessage());
             Server.sendResponse(exchange, 500, "{\"error\":\"Failed to submit concern. Please try again later.\"}");
         }
     }
 
-    // ---- GET ALL COMPLAINTS (Admin) ----
     private void getAllComplaints(HttpExchange exchange) throws IOException {
         Connection conn = DatabaseConnection.getConnection();
 
@@ -142,6 +134,7 @@ public class ComplaintRoutes implements HttpHandler {
         }
 
         try {
+            ensureComplaintsTable(conn);
             String sql = "SELECT * FROM complaints ORDER BY created_at DESC";
             PreparedStatement stmt = conn.prepareStatement(sql);
             ResultSet rs = stmt.executeQuery();
@@ -154,11 +147,14 @@ public class ComplaintRoutes implements HttpHandler {
                 json.append("{")
                     .append("\"id\":").append(rs.getInt("id")).append(",")
                     .append("\"order_id\":").append(rs.getInt("order_id")).append(",")
+                    .append("\"food_id\":").append(rs.getInt("food_id")).append(",")
+                    .append("\"item_code\":\"").append(escapeJson(rs.getString("item_code"))).append("\",")
+                    .append("\"food_name\":\"").append(escapeJson(rs.getString("food_name"))).append("\",")
                     .append("\"customer_name\":\"").append(escapeJson(rs.getString("customer_name"))).append("\",")
                     .append("\"customer_email\":\"").append(escapeJson(rs.getString("customer_email"))).append("\",")
                     .append("\"message\":\"").append(escapeJson(rs.getString("message"))).append("\",")
                     .append("\"status\":\"").append(escapeJson(rs.getString("status"))).append("\",")
-                    .append("\"created_at\":\"").append(rs.getString("created_at")).append("\"")
+                    .append("\"created_at\":\"").append(escapeJson(rs.getString("created_at"))).append("\"")
                     .append("}");
                 first = false;
             }
@@ -167,12 +163,11 @@ public class ComplaintRoutes implements HttpHandler {
             Server.sendResponse(exchange, 200, json.toString());
 
         } catch (Exception e) {
-            System.out.println("❌ Error fetching complaints: " + e.getMessage());
+            System.out.println("Error fetching complaints: " + e.getMessage());
             Server.sendResponse(exchange, 500, "{\"error\":\"Failed to fetch complaints\"}");
         }
     }
 
-    // ---- UPDATE COMPLAINT STATUS (Admin) ----
     private void updateComplaintStatus(HttpExchange exchange, int complaintId) throws IOException {
         Connection conn = DatabaseConnection.getConnection();
 
@@ -197,14 +192,13 @@ public class ComplaintRoutes implements HttpHandler {
             int rows = stmt.executeUpdate();
 
             if (rows > 0) {
-                System.out.println("📝 Complaint #" + complaintId + " status updated to: " + newStatus);
-                Server.sendResponse(exchange, 200, "{\"message\":\"Complaint status updated to " + newStatus + "\"}");
+                Server.sendResponse(exchange, 200, "{\"message\":\"Complaint status updated to " + escapeJson(newStatus) + "\"}");
             } else {
                 Server.sendResponse(exchange, 404, "{\"error\":\"Complaint not found\"}");
             }
 
         } catch (Exception e) {
-            System.out.println("❌ Error updating complaint: " + e.getMessage());
+            System.out.println("Error updating complaint: " + e.getMessage());
             Server.sendResponse(exchange, 500, "{\"error\":\"Failed to update complaint\"}");
         }
     }
@@ -214,16 +208,58 @@ public class ComplaintRoutes implements HttpHandler {
             String createSql = "CREATE TABLE IF NOT EXISTS complaints (" +
                 "id INT AUTO_INCREMENT PRIMARY KEY, " +
                 "order_id INT, " +
+                "food_id INT, " +
+                "item_code VARCHAR(32), " +
                 "customer_name VARCHAR(100), " +
                 "customer_email VARCHAR(150), " +
+                "food_name VARCHAR(150), " +
                 "message TEXT NOT NULL, " +
                 "status VARCHAR(20) DEFAULT 'pending', " +
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                 ")";
             conn.prepareStatement(createSql).execute();
+
+            DatabaseMetaData meta = conn.getMetaData();
+            ensureColumn(conn, meta, "complaints", "food_id", "ALTER TABLE complaints ADD COLUMN food_id INT");
+            ensureColumn(conn, meta, "complaints", "item_code", "ALTER TABLE complaints ADD COLUMN item_code VARCHAR(32)");
+            ensureColumn(conn, meta, "complaints", "food_name", "ALTER TABLE complaints ADD COLUMN food_name VARCHAR(150)");
         } catch (SQLException e) {
-            System.out.println("⚠️ Could not create complaints table: " + e.getMessage());
+            System.out.println("Could not create complaints table: " + e.getMessage());
         }
+    }
+
+    private void ensureColumn(Connection conn, DatabaseMetaData meta, String tableName, String columnName, String alterSql) {
+        try (ResultSet columns = meta.getColumns(null, null, tableName, columnName)) {
+            if (!columns.next()) {
+                conn.prepareStatement(alterSql).execute();
+            }
+        } catch (SQLException e) {
+            System.out.println("Could not ensure complaint column " + columnName + ": " + e.getMessage());
+        }
+    }
+
+    private ComplaintLookup lookupComplaintItem(Connection conn, String itemCode, String email) {
+        String sql = "SELECT o.id AS order_id, o.customer_name, oi.food_id, f.name AS food_name " +
+                     "FROM order_items oi " +
+                     "JOIN orders o ON o.id = oi.order_id " +
+                     "LEFT JOIN foods f ON f.id = oi.food_id " +
+                     "WHERE oi.item_code = ? AND LOWER(IFNULL(o.customer_email, '')) = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, itemCode);
+            stmt.setString(2, email);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return new ComplaintLookup(
+                    rs.getInt("order_id"),
+                    rs.getInt("food_id"),
+                    rs.getString("food_name"),
+                    rs.getString("customer_name")
+                );
+            }
+        } catch (SQLException e) {
+            System.out.println("Error looking up complaint item: " + e.getMessage());
+        }
+        return null;
     }
 
     private String escapeJson(String value) {
@@ -249,5 +285,19 @@ public class ComplaintRoutes implements HttpHandler {
         }
         if (end == -1) end = json.length();
         return json.substring(start, end);
+    }
+
+    private static class ComplaintLookup {
+        final int orderId;
+        final int foodId;
+        final String foodName;
+        final String customerName;
+
+        ComplaintLookup(int orderId, int foodId, String foodName, String customerName) {
+            this.orderId = orderId;
+            this.foodId = foodId;
+            this.foodName = foodName == null ? "Food item" : foodName;
+            this.customerName = customerName == null ? "" : customerName;
+        }
     }
 }

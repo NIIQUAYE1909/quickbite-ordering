@@ -347,6 +347,7 @@ function renderMenu(items) {
       </div>
     </div>`;
   }).join('');
+
 }
 
 // ---------- FOOD DETAIL MODAL ----------
@@ -809,6 +810,7 @@ async function placeOrder() {
       orderData.orderedAt = new Date().toISOString();
       orderData.driver_name = result.driver_name || '';
       orderData.driver_phone = result.driver_phone || '';
+      if (Array.isArray(result.items) && result.items.length) orderData.items = result.items;
     }
   } catch (_) {
     // Use local fallback — already set above
@@ -834,8 +836,11 @@ function showOrderSuccess(order) {
   const driverLine = order.driver_name
     ? ` Your rider is ${order.driver_name}${order.driver_phone ? ` (${order.driver_phone})` : ''}.`
     : '';
+  const itemCodes = Array.isArray(order.items)
+    ? order.items.map((item) => item.item_code).filter(Boolean)
+    : [];
   document.getElementById('successMsg').textContent =
-    `Your order has been received for delivery to ${order.customer.address}.${driverLine}`;
+    `Your order has been received for delivery to ${order.customer.address}.${driverLine}${itemCodes.length ? ` Save these food reference codes for support: ${itemCodes.join(', ')}.` : ''}`;
   document.getElementById('successOrderId').textContent = order.id;
   showModal('successModal');
 
@@ -866,13 +871,21 @@ function renderOrders() {
       'Confirmed': '', 'Preparing': 'preparing', 'On the way': 'transit',
       'Delivered': '', 'Cancelled': 'pending'
     }[order.status] || '';
+    const itemSummary = Array.isArray(order.items)
+      ? order.items.map(i => {
+          const qty = i.qty || i.quantity || 1;
+          const refLine = i.item_code ? ` <small style="display:block; color:var(--muted);">Ref: ${i.item_code}</small>` : '';
+          return `${i.emoji || ''} ${i.name || 'Item'} x${qty}${refLine}`;
+        }).join(' · ')
+      : 'No item details';
+    const totalPrice = Number(order.grandTotal ?? order.total ?? 0);
 
     return `
     <div class="order-card">
       <div class="order-info">
         <strong>Order ${order.id}</strong>
         <span>${order.items.map(i => `${i.emoji || ''} ${i.name} ×${i.qty}`).join(' · ')}</span><br/>
-        <span style="margin-top:0.15rem; display:block;">${order.time}</span>
+        <span style="margin-top:0.15rem; display:block;">${order.time || formatOrderDate(order.orderedAt)}</span>
       </div>
       <div class="order-right">
         <div class="price">GH₵ ${order.grandTotal.toFixed(2)}</div>
@@ -885,6 +898,16 @@ function renderOrders() {
       </div>
     </div>`;
   }).join('');
+
+  list.querySelectorAll('.order-card .order-info span:first-of-type').forEach((span, index) => {
+    const order = orders[index];
+    if (!order || !Array.isArray(order.items)) return;
+    span.innerHTML = order.items.map((item) => {
+      const qty = item.qty || item.quantity || 1;
+      const refLine = item.item_code ? ` <small style="display:block; color:var(--muted);">Ref: ${item.item_code}</small>` : '';
+      return `${item.emoji || ''} ${item.name || 'Item'} x${qty}${refLine}`;
+    }).join(' · ');
+  });
 }
 
 function clearOrders() {
@@ -933,6 +956,7 @@ function verifyAdmin() {
     document.getElementById('adminPassword').value = '';
     syncAdminAccess();
     loadAllOrdersAdmin();
+    loadAllComplaintsAdmin();
     showToast('✅ Admin logged in successfully');
     scrollToSection('admin');
   } else {
@@ -952,7 +976,10 @@ function logoutAdmin() {
 function checkAdminLogin() {
   isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true';
   syncAdminAccess();
-  if (isAdminLoggedIn) loadAllOrdersAdmin();
+  if (isAdminLoggedIn) {
+    loadAllOrdersAdmin();
+    loadAllComplaintsAdmin();
+  }
 }
 
 // ========== ADMIN PANEL FUNCTIONS ==========
@@ -1458,7 +1485,10 @@ function stopDriverSharing() {
 }
 
 // Alias for HTML button onclick="loadAllOrders()"
-function loadAllOrders() { loadAllOrdersAdmin(); }
+function loadAllOrders() {
+  loadAllOrdersAdmin();
+  loadAllComplaintsAdmin();
+}
 
 // ---------- REVIEW ----------
 function openReview(orderId) {
@@ -1695,8 +1725,94 @@ function clearAuthForms() {
   setAuthFeedback('loginFeedback', '');
   setAuthFeedback('registerFeedback', '');
 }
+
+async function submitComplaint() {
+  const itemCode = document.getElementById('complaintItemCode')?.value.trim().toUpperCase() || '';
+  const email = document.getElementById('complaintEmail')?.value.trim().toLowerCase() || '';
+  const message = document.getElementById('complaintMessage')?.value.trim() || '';
+
+  setAuthFeedback('complaintFeedback', '');
+
+  if (!itemCode || !email || !message) {
+    setAuthFeedback('complaintFeedback', 'Please enter the food reference code, your email, and your concern.', true);
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/complaints`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        item_code: itemCode,
+        email,
+        name: currentUser?.name || '',
+        message
+      })
+    });
+
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setAuthFeedback('complaintFeedback', result.error || 'Unable to submit your concern right now.', true);
+      return;
+    }
+
+    setAuthFeedback('complaintFeedback', `Concern submitted for ${result.food_name || 'your item'} with code ${result.item_code}.`);
+    showToast(`Concern submitted. Ref ${result.item_code}`);
+    document.getElementById('complaintItemCode').value = '';
+    document.getElementById('complaintMessage').value = '';
+  } catch (_) {
+    setAuthFeedback('complaintFeedback', 'Unable to submit your concern right now.', true);
+  }
+}
+
+async function loadAllComplaintsAdmin() {
+  const list = document.getElementById('adminComplaintsList');
+  if (!list) return;
+  if (!isAdminLoggedIn) {
+    list.innerHTML = '<div class="empty-orders">Admin sign-in is required to view customer concerns.</div>';
+    return;
+  }
+
+  list.innerHTML = '<div class="empty-orders">Loading customer concerns...</div>';
+
+  try {
+    const response = await fetch(`${API_BASE}/complaints`);
+    const complaints = await response.json();
+
+    if (!Array.isArray(complaints) || complaints.length === 0) {
+      list.innerHTML = '<div class="empty-orders">No customer concerns yet.</div>';
+      return;
+    }
+
+    list.innerHTML = complaints.map((complaint) => `
+      <div class="order-card" style="flex-direction:column; gap:0.6rem;">
+        <div style="display:flex; justify-content:space-between; gap:0.75rem; flex-wrap:wrap;">
+          <div>
+            <strong>Concern #${complaint.id}</strong>
+            <div style="color:var(--muted); font-size:0.88rem; margin-top:0.25rem;">${complaint.food_name || 'Food item'} · Ref ${complaint.item_code || 'N/A'}</div>
+          </div>
+          <div class="order-status ${complaint.status === 'resolved' ? '' : 'pending'}">${complaint.status || 'pending'}</div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.5rem; color:var(--muted); font-size:0.9rem;">
+          <div><strong>Order:</strong> #${complaint.order_id || 'N/A'}</div>
+          <div><strong>Food ID:</strong> ${complaint.food_id || 'N/A'}</div>
+          <div><strong>User:</strong> ${complaint.customer_name || 'N/A'}</div>
+          <div><strong>Email:</strong> ${complaint.customer_email || 'N/A'}</div>
+        </div>
+        <div style="padding:0.75rem; background:var(--bg); border-radius:10px;">${complaint.message || ''}</div>
+      </div>
+    `).join('');
+  } catch (_) {
+    list.innerHTML = '<div class="empty-orders">Unable to load customer concerns right now.</div>';
+  }
+}
 // ---------- MODAL HELPERS ----------
 function showModal(id) {
+  if (id === 'complaintModal') {
+    const emailInput = document.getElementById('complaintEmail');
+    if (emailInput && currentUser?.email) emailInput.value = currentUser.email;
+    setAuthFeedback('complaintFeedback', '');
+  }
   document.getElementById(id).classList.add('open');
 }
 

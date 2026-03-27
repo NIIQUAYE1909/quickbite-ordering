@@ -234,6 +234,13 @@
     <div class="orders-list" id="adminOrdersList">
       <div class="empty-orders">Loading orders...</div>
     </div>
+    <div class="section-header" style="margin-top:2rem;">
+      <h2 class="section-title">Customer <span>Concerns</span></h2>
+      <button class="btn-outline" onclick="loadAllComplaintsAdmin()">Refresh Concerns</button>
+    </div>
+    <div class="orders-list" id="adminComplaintsList">
+      <div class="empty-orders">No customer concerns yet.</div>
+    </div>
   </section>
 
   <!-- ========== CHECKOUT MODAL ========== -->
@@ -528,8 +535,8 @@
       <h2>📝 Submit a Concern</h2>
       <p class="modal-sub">Let us know about any issues with your order.</p>
       <div class="form-group">
-        <label>Order ID</label>
-        <input type="number" id="complaintOrderId" placeholder="Enter your order ID"/>
+        <label>Food Reference Code</label>
+        <input type="text" id="complaintItemCode" placeholder="Enter the item code from your order"/>
       </div>
       <div class="form-group">
         <label>Your Email</label>
