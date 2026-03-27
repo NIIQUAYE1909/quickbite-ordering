@@ -1602,15 +1602,13 @@ function updateAuthUI() {
 }
 
 function enforceAuthState() {
+  // Flexible auth: users can browse without signing in
+  // Only require sign in when trying to place an order
   const gate = document.getElementById('authGate');
-  const isLoggedIn = Boolean(currentUser);
-
-  document.body.classList.toggle('auth-locked', !isLoggedIn);
-  if (gate) gate.classList.toggle('open', !isLoggedIn);
-
-  if (!isLoggedIn) {
-    closeProtectedPanels();
-  }
+  
+  // Always allow browsing - no auth gate blocking
+  document.body.classList.remove('auth-locked');
+  if (gate) gate.classList.remove('open');
 }
 
 function closeProtectedPanels() {
