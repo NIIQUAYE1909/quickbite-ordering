@@ -27,21 +27,21 @@
     <div class="logo" onclick="scrollToTop()">Quick<span>Bite</span> 🍽️</div>
     <ul class="nav-links">
       <li><a href="#home" onclick="scrollToSection('home')">Home</a></li>
-      <li><a href="#menu" onclick="scrollToSection('menu')">Menu</a></li>
+      <li><a href="#menu" onclick="scrollToSection('menu')" id="tourMenuLink">Menu</a></li>
       <li><a href="#orders" onclick="scrollToSection('orders')">My Orders</a></li>
-      <li><a href="#" onclick="showModal('trackModal')">Track Order</a></li>
+      <li><a href="#" onclick="showModal('trackModal')" id="tourTrackLink">Track Order</a></li>
       <li><a href="#" onclick="showModal('driverTrackModal')" title="For delivery drivers">🚗 Driver</a></li>
     </ul>
     <div class="nav-right">
       <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">☀️</button>
-      <button class="wishlist-btn" onclick="toggleWishlist()" title="Favourites">
+      <button class="wishlist-btn" onclick="toggleWishlist()" title="Favourites" id="tourWishlistBtn">
         ♡ <span id="wishlistCount">0</span>
       </button>
-      <button class="cart-btn" onclick="toggleCart()">
+      <button class="cart-btn" onclick="toggleCart()" id="tourCartBtn">
         🛒 Cart <span class="cart-count" id="cartCount">0</span>
       </button>
       <div id="authBtn">
-        <button class="btn-signin" onclick="showModal('loginModal')">Sign In</button>
+        <button class="btn-signin" onclick="showModal('loginModal')" id="tourSignInBtn">Sign In</button>
       </div>
     </div>
     <!-- Mobile menu toggle -->
@@ -63,7 +63,7 @@
       <button class="mobile-drawer-btn" type="button" onclick="toggleTheme(); closeMobileMenu()">Toggle Theme</button>
       <button class="mobile-drawer-btn" type="button" onclick="toggleWishlist(); closeMobileMenu()">♡ Favourites</button>
       <button class="mobile-drawer-btn" type="button" onclick="toggleCart(); closeMobileMenu()">🛒 Open Cart</button>
-      <button class="mobile-drawer-btn mobile-drawer-primary" type="button" onclick="showModal('loginModal'); closeMobileMenu()">Sign In</button>
+      <button class="mobile-drawer-btn mobile-drawer-primary" type="button" onclick="showModal('loginModal'); closeMobileMenu()" id="tourMobileSignInBtn">Sign In</button>
     </div>
   </div>
   <div class="mobile-drawer-backdrop" id="mobileDrawerBackdrop" onclick="closeMobileMenu()"></div>
@@ -81,12 +81,32 @@
       <span>📦</span>
       <b>Orders</b>
     </button>
-    <button class="mobile-quickbar-btn mobile-quickbar-cart" type="button" onclick="toggleCart()">
+    <button class="mobile-quickbar-btn mobile-quickbar-cart" type="button" onclick="toggleCart()" id="tourMobileCartBtn">
       <span>🛒</span>
       <b>Cart</b>
       <small class="mobile-quickbar-count" id="mobileCartCount">0</small>
     </button>
   </nav>
+
+  <div class="tour-overlay" id="tourOverlay" aria-hidden="true">
+    <div class="tour-backdrop"></div>
+    <div class="tour-popover" id="tourPopover">
+      <div class="tour-step-label" id="tourStepLabel">Quick Tour</div>
+      <h3 id="tourTitle">Welcome to QuickBite</h3>
+      <p id="tourText">We will show you the buttons that matter so the site feels easy the first time.</p>
+      <div class="tour-progress">
+        <span id="tourProgressText">1 / 5</span>
+        <div class="tour-progress-bar"><i id="tourProgressBar"></i></div>
+      </div>
+      <div class="tour-actions">
+        <button type="button" class="btn-outline" onclick="skipTour()">Skip</button>
+        <div class="tour-actions-right">
+          <button type="button" class="btn-outline" id="tourBackBtn" onclick="previousTourStep()">Back</button>
+          <button type="button" class="btn-primary" id="tourNextBtn" onclick="nextTourStep()">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- ========== HERO SECTION ========== -->
   <section class="hero" id="home">
@@ -95,7 +115,7 @@
       <h1>Delicious Food,<br/><em>Delivered Fast.</em></h1>
       <p>Order from top local restaurants and get hot meals delivered straight to your door.</p>
       <div class="hero-actions">
-        <button class="btn-primary" type="button" onclick="scrollToSection('menu')">Browse Menu</button>
+        <button class="btn-primary" type="button" onclick="scrollToSection('menu')" id="tourBrowseBtn">Browse Menu</button>
         <button class="btn-outline hero-outline-btn" type="button" onclick="scrollToSection('deliveryCoverage')">Where We Deliver</button>
       </div>
       <div class="search-bar">
@@ -166,7 +186,7 @@
     <h2 class="section-title">What are you <span>craving?</span></h2>
     <div class="categories" id="categories">
       <button class="cat-pill active" data-cat="all" onclick="filterCategory('all', this)">🍽️ All</button>
-      <button class="cat-pill" data-cat="burger" onclick="filterCategory('burger', this)">🍔 Burgers</button>
+      <button class="cat-pill" data-cat="burger" onclick="filterCategory('burger', this)" id="tourCategoryBtn">🍔 Burgers</button>
       <button class="cat-pill" data-cat="pizza" onclick="filterCategory('pizza', this)">🍕 Pizza</button>
       <button class="cat-pill" data-cat="local" onclick="filterCategory('local', this)">🍜 Local Dishes</button>
       <button class="cat-pill" data-cat="chicken" onclick="filterCategory('chicken', this)">🍗 Chicken</button>

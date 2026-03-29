@@ -207,6 +207,10 @@ let trackedOrdersHistory = [];
 let pendingComplaints = [];
 let isSubmittingOrder = false;
 let activeFoodCustomization = null;
+let activeTourStep = 0;
+let highlightedTourElement = null;
+
+const TOUR_STORAGE_KEY = 'qb_guided_tour_done';
 
 const PASSWORD_RULES = {
   minLength: 8,
@@ -295,6 +299,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateWishlistUI();
   enforceAuthState();
   checkAdminLogin();
+  maybeStartTour();
 
   // Navbar scroll shrink
   window.addEventListener('scroll', () => {
@@ -319,6 +324,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   }
+
+  window.addEventListener('resize', () => {
+    if (document.getElementById('tourOverlay')?.classList.contains('open')) {
+      renderTourStep();
+    }
+  });
+
+  window.addEventListener('scroll', () => {
+    if (document.getElementById('tourOverlay')?.classList.contains('open')) {
+      positionTourPopover();
+    }
+  }, { passive: true });
 });
 
 window.addEventListener('storage', (event) => {
@@ -2755,5 +2772,163 @@ function closeMobileMenu() {
   if (hamburger) hamburger.classList.remove('active');
   if (backdrop) backdrop.classList.remove('open');
   document.body.classList.remove('nav-surface-open');
+}
+
+// ---------- FIRST-TIME TOUR ----------
+function getTourSteps() {
+  const mobile = window.innerWidth <= 900;
+  return [
+    {
+      label: 'Step 1',
+      title: 'Start Here',
+      text: 'Tap Browse Menu to jump straight into the food list and start window-shopping quickly.',
+      selector: '#tourBrowseBtn'
+    },
+    {
+      label: 'Step 2',
+      title: 'Search Faster',
+      text: 'Use this search bar when you already know the food or drink you want.',
+      selector: '#searchInput'
+    },
+    {
+      label: 'Step 3',
+      title: 'Filter By Craving',
+      text: 'These category buttons narrow the menu so you can focus on burgers, local dishes, desserts, and more.',
+      selector: '#tourCategoryBtn'
+    },
+    {
+      label: 'Step 4',
+      title: mobile ? 'Open Cart Fast' : 'Your Cart Lives Here',
+      text: mobile
+        ? 'On phone, this quick cart button is your fastest way to review the order anytime.'
+        : 'This cart button shows everything you have picked and is where checkout starts.',
+      selector: mobile ? '#tourMobileCartBtn' : '#tourCartBtn'
+    },
+    {
+      label: 'Step 5',
+      title: 'Track Your Order',
+      text: 'When you place an order, use Track Order to follow delivery progress without guessing.',
+      selector: '#tourTrackLink'
+    },
+    {
+      label: 'Step 6',
+      title: 'Sign In When Ready',
+      text: 'You can browse first, then sign in only when you are ready to place the order.',
+      selector: mobile ? '#tourMobileSignInBtn' : '#tourSignInBtn'
+    }
+  ];
+}
+
+function maybeStartTour() {
+  try {
+    if (localStorage.getItem(TOUR_STORAGE_KEY) === 'done') return;
+  } catch (e) {}
+
+  setTimeout(() => startTour(), 700);
+}
+
+function startTour(force = false) {
+  if (!force) {
+    try {
+      if (localStorage.getItem(TOUR_STORAGE_KEY) === 'done') return;
+    } catch (e) {}
+  }
+
+  const overlay = document.getElementById('tourOverlay');
+  if (!overlay) return;
+  activeTourStep = 0;
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden', 'false');
+  renderTourStep();
+}
+
+function renderTourStep() {
+  const steps = getTourSteps();
+  const step = steps[activeTourStep];
+  if (!step) {
+    completeTour();
+    return;
+  }
+
+  clearTourHighlight();
+
+  const target = document.querySelector(step.selector);
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    highlightedTourElement = target;
+    target.classList.add('tour-highlight');
+  }
+
+  const stepLabel = document.getElementById('tourStepLabel');
+  const title = document.getElementById('tourTitle');
+  const text = document.getElementById('tourText');
+  const progress = document.getElementById('tourProgressText');
+  const progressBar = document.getElementById('tourProgressBar');
+  const backBtn = document.getElementById('tourBackBtn');
+  const nextBtn = document.getElementById('tourNextBtn');
+
+  if (stepLabel) stepLabel.textContent = step.label;
+  if (title) title.textContent = step.title;
+  if (text) text.textContent = step.text;
+  if (progress) progress.textContent = `${activeTourStep + 1} / ${steps.length}`;
+  if (progressBar) progressBar.style.width = `${((activeTourStep + 1) / steps.length) * 100}%`;
+  if (backBtn) backBtn.disabled = activeTourStep === 0;
+  if (nextBtn) nextBtn.textContent = activeTourStep === steps.length - 1 ? 'Finish' : 'Next';
+
+  setTimeout(positionTourPopover, 150);
+}
+
+function positionTourPopover() {
+  const popover = document.getElementById('tourPopover');
+  if (!popover || !highlightedTourElement) return;
+
+  const rect = highlightedTourElement.getBoundingClientRect();
+  const popRect = popover.getBoundingClientRect();
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const top = spaceBelow > popRect.height + 28
+    ? rect.bottom + 16
+    : Math.max(16, rect.top - popRect.height - 16);
+  const left = Math.min(
+    window.innerWidth - popRect.width - 16,
+    Math.max(16, rect.left + (rect.width / 2) - (popRect.width / 2))
+  );
+
+  popover.style.top = `${top}px`;
+  popover.style.left = `${left}px`;
+  popover.style.transform = 'none';
+}
+
+function clearTourHighlight() {
+  if (highlightedTourElement) {
+    highlightedTourElement.classList.remove('tour-highlight');
+    highlightedTourElement = null;
+  }
+}
+
+function nextTourStep() {
+  activeTourStep += 1;
+  renderTourStep();
+}
+
+function previousTourStep() {
+  if (activeTourStep === 0) return;
+  activeTourStep -= 1;
+  renderTourStep();
+}
+
+function skipTour() {
+  completeTour();
+}
+
+function completeTour() {
+  const overlay = document.getElementById('tourOverlay');
+  clearTourHighlight();
+  if (overlay) {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+  try {
+    localStorage.setItem(TOUR_STORAGE_KEY, 'done');
+  } catch (e) {}
 }
 
