@@ -391,6 +391,7 @@ function getFoodImageForItem(item) {
     { key: 'waakye special', url: 'https://upload.wikimedia.org/wikipedia/commons/7/7e/LOCAL_FOOD_CALLED_WAAKYE_IN_GHANA.jpg' },
     { key: 'jollof rice special', url: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/Jollof_%28Jollof-_Rice%29.jpg' },
     { key: 'fufu & light soup', url: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Goat_Light_Soup_and_Fufu.jpg' },
+    { key: 'kenkey & fried fish', url: 'https://upload.wikimedia.org/wikipedia/commons/8/81/Ga_Kenkey.jpg' },
     { key: 'grilled chicken combo', url: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=1000&q=80' },
     { key: 'spicy wings', url: 'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=1000&q=80' },
     { key: 'chicken shawarma', url: 'https://images.unsplash.com/photo-1529006557810-274b9b2fc783?auto=format&fit=crop&w=1000&q=80' },
@@ -408,6 +409,7 @@ function getFoodImageForItem(item) {
   if (dishText.includes('waakye')) return 'https://upload.wikimedia.org/wikipedia/commons/7/7e/LOCAL_FOOD_CALLED_WAAKYE_IN_GHANA.jpg';
   if (dishText.includes('jollof')) return 'https://upload.wikimedia.org/wikipedia/commons/0/0d/Jollof_%28Jollof-_Rice%29.jpg';
   if (dishText.includes('fufu') && dishText.includes('light soup')) return 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Goat_Light_Soup_and_Fufu.jpg';
+  if (dishText.includes('kenkey') && dishText.includes('fish')) return 'https://upload.wikimedia.org/wikipedia/commons/8/81/Ga_Kenkey.jpg';
   if (dishText.includes('sobolo') || dishText.includes('hibiscus')) return 'https://images.unsplash.com/photo-1556881286-fc6915169721?auto=format&fit=crop&w=1000&q=80';
 
   // Category-based food photos
