@@ -312,31 +312,62 @@
   </section>
 
   <!-- ========== ADMIN PANEL ========== -->
-  <section class="orders-section" id="admin" style="display:none;">
-    <div class="section-header">
-      <h2 class="section-title">Admin <span>Panel</span> 🔧</h2>
-      <button class="btn-primary" onclick="loadAllOrders()">🔄 Refresh Orders</button>
-    </div>
-    <div class="admin-stats" id="adminStats"></div>
-    <div style="display:flex; justify-content:flex-end; margin:-0.2rem 0 1rem;">
-      <button class="btn-outline" onclick="logoutAdmin()">Log Out Admin</button>
-    </div>
-    <div class="section-header" style="margin-top:1.3rem;">
-      <h2 class="section-title">Registered <span>Users</span></h2>
-      <button class="btn-outline" onclick="loadAllOrdersAdmin()">Refresh Users</button>
-    </div>
-    <div class="orders-list" id="adminUsersList">
-      <div class="empty-orders">Admin sign-in is required to view customer accounts.</div>
-    </div>
-    <div class="orders-list" id="adminOrdersList">
-      <div class="empty-orders">Loading orders...</div>
-    </div>
-    <div class="section-header" style="margin-top:2rem;">
-      <h2 class="section-title">Customer <span>Concerns</span> <span id="adminComplaintBadge" style="display:none; margin-left:0.5rem; font-size:0.75rem; padding:0.2rem 0.55rem; border-radius:999px; background:#ef4444; color:white; vertical-align:middle;">0</span></h2>
-      <button class="btn-outline" id="adminComplaintRefreshBtn" onclick="loadAllComplaintsAdmin()">Refresh Concerns</button>
-    </div>
-    <div class="orders-list" id="adminComplaintsList">
-      <div class="empty-orders">No customer concerns yet.</div>
+  <section class="orders-section admin-section" id="admin" style="display:none;">
+    <div class="admin-shell">
+      <div class="admin-hero">
+        <div class="admin-hero-copy">
+          <div class="admin-kicker">QuickBite Control Desk</div>
+          <h2 class="section-title">Admin <span>Dashboard</span></h2>
+          <p class="admin-subtitle">Monitor orders, customers, and concerns from one calm workspace built for daily operations.</p>
+        </div>
+        <div class="admin-hero-actions">
+          <button class="btn-outline" onclick="logoutAdmin()">Log Out Admin</button>
+          <button class="btn-primary" onclick="loadAllOrdersAdmin()">Refresh Dashboard</button>
+        </div>
+      </div>
+
+      <div class="admin-stats" id="adminStats"></div>
+
+      <div class="admin-grid">
+        <div class="admin-panel admin-panel-users">
+          <div class="admin-panel-head">
+            <div>
+              <div class="admin-panel-label">Customer Base</div>
+              <h3>Registered Users</h3>
+            </div>
+            <button class="btn-outline" onclick="loadAllOrdersAdmin()">Refresh Users</button>
+          </div>
+          <div class="admin-panel-body orders-list" id="adminUsersList">
+            <div class="empty-orders">Admin sign-in is required to view customer accounts.</div>
+          </div>
+        </div>
+
+        <div class="admin-panel admin-panel-orders">
+          <div class="admin-panel-head">
+            <div>
+              <div class="admin-panel-label">Order Flow</div>
+              <h3>Live Orders</h3>
+            </div>
+            <button class="btn-outline" onclick="loadAllOrdersAdmin()">Refresh Orders</button>
+          </div>
+          <div class="admin-panel-body orders-list" id="adminOrdersList">
+            <div class="empty-orders">Loading orders...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-panel admin-panel-concerns">
+        <div class="admin-panel-head">
+          <div>
+            <div class="admin-panel-label">Support Queue</div>
+            <h3>Customer Concerns <span id="adminComplaintBadge" class="admin-badge" style="display:none;">0</span></h3>
+          </div>
+          <button class="btn-outline" id="adminComplaintRefreshBtn" onclick="loadAllComplaintsAdmin()">Refresh Concerns</button>
+        </div>
+        <div class="admin-panel-body orders-list" id="adminComplaintsList">
+          <div class="empty-orders">No customer concerns yet.</div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -614,7 +645,7 @@
   <div class="modal-overlay" id="adminLoginModal" onclick="closeModalOutside(event, 'adminLoginModal')">
     <div class="modal">
       <button class="modal-close" onclick="closeModal('adminLoginModal')">✕</button>
-      <h2>🔐 Admin Login</h2>
+      <h2>Admin Login</h2>
       <p class="modal-sub">Enter admin credentials to access the panel</p>
       <div class="form-group">
         <label>Admin Username</label>
