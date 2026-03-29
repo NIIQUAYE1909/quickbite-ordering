@@ -76,6 +76,7 @@ public class ReviewRoutes implements HttpHandler {
         }
 
         try {
+            ensureReviewsTable(conn);
             String body = Server.readRequestBody(exchange);
             String customerName = extractJsonValue(body, "customer_name");
             int rating = Integer.parseInt(extractJsonValue(body, "rating"));
@@ -134,6 +135,7 @@ public class ReviewRoutes implements HttpHandler {
         }
 
         try {
+            ensureReviewsTable(conn);
             String sql = "SELECT * FROM reviews ORDER BY created_at DESC";
             PreparedStatement stmt = conn.prepareStatement(sql);
             ResultSet rs = stmt.executeQuery();
@@ -175,6 +177,7 @@ public class ReviewRoutes implements HttpHandler {
         }
 
         try {
+            ensureReviewsTable(conn);
             String sql = "SELECT * FROM reviews WHERE status = 'approved' ORDER BY created_at DESC LIMIT 20";
             PreparedStatement stmt = conn.prepareStatement(sql);
             ResultSet rs = stmt.executeQuery();
@@ -213,6 +216,7 @@ public class ReviewRoutes implements HttpHandler {
         }
 
         try {
+            ensureReviewsTable(conn);
             String body = Server.readRequestBody(exchange);
             String newStatus = extractJsonValue(body, "status");
 
@@ -237,6 +241,24 @@ public class ReviewRoutes implements HttpHandler {
         } catch (Exception e) {
             System.out.println("❌ Error updating review: " + e.getMessage());
             Server.sendResponse(exchange, 500, "{\"error\":\"Failed to update review\"}");
+        }
+    }
+
+    private void ensureReviewsTable(Connection conn) {
+        try {
+            String createSql = "CREATE TABLE IF NOT EXISTS reviews (" +
+                "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "order_id INT, " +
+                "food_id INT, " +
+                "customer_name VARCHAR(100), " +
+                "rating INT NOT NULL, " +
+                "comment TEXT, " +
+                "status VARCHAR(20) DEFAULT 'pending', " +
+                "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                ")";
+            conn.prepareStatement(createSql).execute();
+        } catch (SQLException e) {
+            System.out.println("Could not ensure reviews table: " + e.getMessage());
         }
     }
 

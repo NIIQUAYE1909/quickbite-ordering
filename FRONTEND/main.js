@@ -127,6 +127,8 @@ const PASSWORD_RULES = {
   special: /[^A-Za-z0-9]/
 };
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // ---------- THEME TOGGLE ----------
 function toggleTheme() {
   const body = document.body;
@@ -728,6 +730,10 @@ const API_BASE = (() => {
     ? window.env.API_URL.trim().replace(/\/$/, '')
     : '';
 
+  const isLocalRuntime = window.location.protocol === 'file:'
+    || ['', 'localhost', '127.0.0.1'].includes(window.location.hostname);
+  if (isLocalRuntime) return 'http://localhost:8080/api';
+
   if (configured) return configured;
 
   const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
@@ -737,14 +743,19 @@ const API_BASE = (() => {
 async function placeOrder() {
   // Validate fields
   const name    = document.getElementById('checkoutName').value.trim();
-  const email   = document.getElementById('checkoutEmail')?.value.trim() || '';
+  const email   = document.getElementById('checkoutEmail')?.value.trim().toLowerCase() || '';
   const phone   = document.getElementById('checkoutPhone').value.trim();
   const address = document.getElementById('checkoutAddress').value.trim();
   const method  = document.querySelector('input[name="payment"]:checked').value;
   const instructions = document.getElementById('specialInstructions')?.value.trim() || '';
 
-  if (!name || !phone || !address) {
-    showToast('⚠️ Please fill in your delivery details');
+  if (!name || !email || !phone || !address) {
+    showToast('⚠️ Please fill in your delivery details, including email');
+    return;
+  }
+
+  if (!EMAIL_PATTERN.test(email)) {
+    showToast('⚠️ Please enter a valid email address');
     return;
   }
 
@@ -1561,12 +1572,42 @@ function setRating(val) {
   });
 }
 
-function submitReview() {
+async function submitReview() {
   if (!currentRating) { showToast('⭐ Please select a rating'); return; }
+  const order = findOrderById(reviewItemId);
+  if (!order) {
+    showToast('Unable to find that order for review.');
+    return;
+  }
   const text = document.getElementById('reviewText').value.trim();
-  closeModal('reviewModal');
-  showToast(`⭐ Thank you for your review!`);
-  console.log('Review submitted:', { orderId: reviewItemId, rating: currentRating, text });
+  const payload = {
+    order_id: Number(normalizeOrderId(reviewItemId)) || null,
+    customer_name: currentUser?.name || order.customer_name || order.customer?.name || 'Customer',
+    rating: currentRating,
+    comment: text
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/reviews`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(result.error || 'Unable to submit your review right now.');
+      return;
+    }
+
+    order.review_status = 'pending';
+    saveState();
+    renderOrders();
+    closeModal('reviewModal');
+    showToast('⭐ Review submitted for approval!');
+  } catch (_) {
+    showToast('Unable to submit your review right now.');
+  }
 }
 
 // ---------- AUTH ----------
@@ -1582,8 +1623,7 @@ async function login() {
     return;
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
+  if (!EMAIL_PATTERN.test(email)) {
     const message = 'Enter a valid email address.';
     setAuthFeedback('loginFeedback', message, true);
     showToast(`Warning: ${message}`);
@@ -1641,8 +1681,7 @@ async function register() {
     return;
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
+  if (!EMAIL_PATTERN.test(email)) {
     const message = 'Enter a valid email address.';
     setAuthFeedback('registerFeedback', message, true);
     showToast(`Warning: ${message}`);

@@ -17,8 +17,8 @@ echo ""
 echo "📦 Compiling Java source files..."
 
 # Compile all Java files in src/ directory
-# Using the MySQL connector from lib/
-javac -cp "src:lib/mysql-connector-j-9.6.0.jar" -d out src/*.java
+# The MySQL connector is only required when running the server.
+javac -cp "src" -d out src/*.java
 
 if [ $? -eq 0 ]; then
     echo "✅ Compilation successful!"

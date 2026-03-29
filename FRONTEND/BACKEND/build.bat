@@ -16,7 +16,8 @@ echo.
 echo Compiling Java source files...
 
 REM Compile all Java files in src/ directory
-javac -cp "src;lib\mysql-connector-j-9.6.0.jar" -d out src\*.java
+REM The MySQL driver is only needed at runtime, not for compilation.
+javac -cp "src" -d out src\*.java
 
 if %ERRORLEVEL% EQU 0 (
     echo.
