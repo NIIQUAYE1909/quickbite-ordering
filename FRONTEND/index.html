@@ -578,6 +578,28 @@
   <!-- ========== TOAST NOTIFICATION ========== -->
   <div class="toast" id="toast"></div>
 
+  <div class="modal-overlay" id="supportModal" onclick="closeModalOutside(event, 'supportModal')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('supportModal')">✕</button>
+      <h2>Support Center</h2>
+      <p class="modal-sub">Choose the fastest way to get help.</p>
+      <div class="support-actions-grid">
+        <button class="support-action-card" type="button" onclick="closeModal('supportModal'); showModal('complaintModal');">
+          <strong>Order Issue</strong>
+          <span>Use this if you have an item code and want us to review a missing, damaged, or wrong item.</span>
+        </button>
+        <a class="support-action-card" href="mailto:quayen010@gmail.com?subject=QuickBite%20Support">
+          <strong>Email Support</strong>
+          <span>Send us details about billing, vendor onboarding, or general customer care.</span>
+        </a>
+        <a class="support-action-card" href="tel:+233509511074">
+          <strong>Call Support</strong>
+          <span>Reach QuickBite directly for urgent delivery problems during business hours.</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="refundPolicyModal" onclick="closeModalOutside(event, 'refundPolicyModal')">
     <div class="modal">
       <button class="modal-close" onclick="closeModal('refundPolicyModal')">✕</button>
@@ -634,7 +656,7 @@
       </div>
       <div class="footer-links">
         <h5>Support</h5>
-        <a href="#" onclick="openFooterModal('complaintModal', 'Support Form'); return false;">Submit Concern</a>
+        <a href="#" onclick="openFooterModal('supportModal', 'Support'); return false;">Submit Concern</a>
         <a href="mailto:quayen010@gmail.com?subject=QuickBite%20Support">Contact Us</a>
         <a href="#" onclick="openFooterModal('refundPolicyModal', 'Refund Policy'); return false;">Refund Policy</a>
         <a href="#" onclick="openFooterModal('privacyPolicyModal', 'Privacy Policy'); return false;">Privacy Policy</a>
