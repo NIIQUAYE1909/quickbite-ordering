@@ -393,6 +393,7 @@ function getFoodImageForItem(item) {
     { key: 'fufu & light soup', url: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Goat_Light_Soup_and_Fufu.jpg' },
     { key: 'kenkey & fried fish', url: 'https://upload.wikimedia.org/wikipedia/commons/8/81/Ga_Kenkey.jpg' },
     { key: 'ampesi & kontomire', url: 'https://upload.wikimedia.org/wikipedia/commons/e/e1/Ampesi_and_kontomire_stew.jpg' },
+    { key: 'tuo zaafi special', url: 'https://upload.wikimedia.org/wikipedia/commons/5/57/Tuo_zaafi.jpg' },
     { key: 'grilled chicken combo', url: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=1000&q=80' },
     { key: 'spicy wings', url: 'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=1000&q=80' },
     { key: 'chicken shawarma', url: 'https://images.unsplash.com/photo-1529006557810-274b9b2fc783?auto=format&fit=crop&w=1000&q=80' },
@@ -412,6 +413,7 @@ function getFoodImageForItem(item) {
   if (dishText.includes('fufu') && dishText.includes('light soup')) return 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Goat_Light_Soup_and_Fufu.jpg';
   if (dishText.includes('kenkey') && dishText.includes('fish')) return 'https://upload.wikimedia.org/wikipedia/commons/8/81/Ga_Kenkey.jpg';
   if (dishText.includes('ampesi') && dishText.includes('kontomire')) return 'https://upload.wikimedia.org/wikipedia/commons/e/e1/Ampesi_and_kontomire_stew.jpg';
+  if (dishText.includes('tuo zaafi') || dishText.includes('tz special')) return 'https://upload.wikimedia.org/wikipedia/commons/5/57/Tuo_zaafi.jpg';
   if (dishText.includes('sobolo') || dishText.includes('hibiscus')) return 'https://images.unsplash.com/photo-1556881286-fc6915169721?auto=format&fit=crop&w=1000&q=80';
 
   // Category-based food photos
