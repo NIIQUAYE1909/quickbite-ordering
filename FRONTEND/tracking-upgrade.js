@@ -270,6 +270,96 @@
       : 'Driver GPS not shared yet.';
   }
 
+  function updateTrackingSummaryDom(data, metrics, options = {}) {
+    const customerShared = isFiniteNumber(data.customer_latitude) && isFiniteNumber(data.customer_longitude);
+    const driverShared = isFiniteNumber(data.latitude) && isFiniteNumber(data.longitude);
+    const distanceLabel = formatDistance(metrics.distanceKm);
+    const etaLabel = formatEta(metrics.etaMinutes, data.status);
+    const routeHint = driverShared && customerShared
+      ? `${distanceLabel} • ${etaLabel}`
+      : driverShared
+        ? 'Driver is live. Waiting for customer location to estimate ETA.'
+        : 'Live ETA will appear when the driver starts sharing.';
+
+    const statusBadge = document.getElementById('trackingStatusBadge');
+    if (statusBadge) {
+      statusBadge.style.background = STATUS_COLORS[data.status] || 'var(--accent)';
+      statusBadge.textContent = `${STATUS_ICONS[data.status] || '📦'} ${data.status}`;
+    }
+
+    const customerValue = document.getElementById('trackingCustomerValue');
+    if (customerValue) customerValue.textContent = data.customer_name || 'N/A';
+    const addressValue = document.getElementById('trackingAddressValue');
+    if (addressValue) addressValue.textContent = `📍 ${data.address || 'N/A'}`;
+    const orderedValue = document.getElementById('trackingOrderedValue');
+    if (orderedValue) orderedValue.textContent = formatOrderDate(data.ordered_at);
+    const itemsValue = document.getElementById('trackingItemsValue');
+    if (itemsValue) itemsValue.textContent = formatOrderItems(data.items);
+
+    const customerPresence = document.getElementById('trackingCustomerPresence');
+    if (customerPresence) {
+      customerPresence.className = `presence-pill ${customerShared ? 'active' : ''}`;
+      customerPresence.textContent = customerShared ? '📍 Customer live' : '📍 Customer not sharing yet';
+    }
+    const driverPresence = document.getElementById('trackingDriverPresence');
+    if (driverPresence) {
+      driverPresence.className = `presence-pill ${driverShared ? 'active driver' : ''}`;
+      driverPresence.textContent = driverShared ? '🚗 Driver live' : '🚗 Driver GPS not live yet';
+    }
+
+    const distanceValue = document.getElementById('trackingDistanceValue');
+    if (distanceValue) distanceValue.textContent = distanceLabel;
+    const etaValue = document.getElementById('trackingEtaValue');
+    if (etaValue) etaValue.textContent = etaLabel;
+    const routeValue = document.getElementById('trackingRouteValue');
+    if (routeValue) routeValue.textContent = routeHint;
+
+    document.querySelectorAll('#trackingProgress .track-step').forEach((stepEl, index) => {
+      const stepIdx = STEPS.indexOf(data.status);
+      stepEl.classList.toggle('done', index <= stepIdx);
+      stepEl.classList.toggle('active', index === stepIdx);
+      const dot = stepEl.querySelector('.track-step-dot');
+      if (dot) dot.textContent = index < stepIdx ? '✓' : (STATUS_ICONS[STEPS[index]] || '●');
+    });
+    document.querySelectorAll('#trackingProgress .track-step-line').forEach((lineEl, index) => {
+      lineEl.classList.toggle('done', index < STEPS.indexOf(data.status));
+    });
+
+    const driverWrap = document.getElementById('trackingDriverWrap');
+    const driverEmpty = document.getElementById('trackingDriverEmpty');
+    if (driverWrap && driverEmpty) {
+      driverWrap.style.display = data.driver_name ? '' : 'none';
+      driverEmpty.style.display = data.driver_name ? 'none' : '';
+    }
+    const driverName = document.getElementById('trackingDriverName');
+    if (driverName) driverName.textContent = data.driver_name || 'Driver';
+    const driverPhone = document.getElementById('trackingDriverPhone');
+    if (driverPhone) {
+      const phone = data.driver_phone || 'N/A';
+      driverPhone.innerHTML = `📱 <a href="tel:${phone}" style="color:inherit;">${phone}</a>`;
+    }
+    const driverSpeed = document.getElementById('trackingDriverSpeed');
+    if (driverSpeed) {
+      driverSpeed.style.display = driverShared ? '' : 'none';
+      driverSpeed.textContent = driverShared ? (data.speed_kmh > 0 ? `${Math.round(data.speed_kmh)} km/h` : 'Stopped') : '';
+    }
+
+    const driverHint = document.getElementById('trackingDriverHint');
+    if (driverHint) driverHint.style.display = (!driverShared && data.driver_name) ? '' : 'none';
+    const customerHint = document.getElementById('trackingCustomerHint');
+    if (customerHint) customerHint.style.display = !customerShared ? '' : 'none';
+    const updated = document.getElementById('trackingUpdated');
+    if (updated) {
+      updated.style.display = data.updated_at ? '' : 'none';
+      updated.textContent = data.updated_at ? `Last driver update: ${new Date(data.updated_at).toLocaleTimeString()}` : '';
+    }
+
+    const historyWrap = document.getElementById('trackingHistoryWrap');
+    if (historyWrap) historyWrap.innerHTML = window.renderTrackingHistoryPoints(data.tracking_points || []);
+
+    return { customerShared, driverShared, etaLabel };
+  }
+
   const originalRenderOrders = typeof window.renderOrders === 'function' ? window.renderOrders : null;
   if (originalRenderOrders) {
     window.renderOrders = function renderOrdersWithTrackingShortcut() {
