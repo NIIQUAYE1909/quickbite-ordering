@@ -1137,7 +1137,7 @@ function stopAdminPortalHeartbeat() {
 
 function handleAdminPortalLockConflict() {
   stopAdminPortalHeartbeat();
-  sessionStorage.setItem(ADMIN_PORTAL_NOTICE_KEY, 'Admin portal is already open in another tab.');
+  sessionStorage.setItem(ADMIN_PORTAL_NOTICE_KEY, 'Admin portal moved to another tab on this device.');
   const url = new URL(window.location.href);
   url.searchParams.delete('portal');
   url.hash = 'home';
@@ -1146,7 +1146,6 @@ function handleAdminPortalLockConflict() {
 
 function claimAdminPortalLock() {
   if (!isAdminPortal()) return true;
-  if (isAdminPortalLockedByAnotherTab()) return false;
   writeAdminPortalLock();
   return true;
 }
@@ -1154,16 +1153,9 @@ function claimAdminPortalLock() {
 function startAdminPortalHeartbeat() {
   if (!isAdminPortal()) return;
   stopAdminPortalHeartbeat();
-  if (!claimAdminPortalLock()) {
-    handleAdminPortalLockConflict();
-    return;
-  }
+  claimAdminPortalLock();
   adminPortalHeartbeat = window.setInterval(() => {
-    if (!claimAdminPortalLock()) {
-      handleAdminPortalLockConflict();
-      return;
-    }
-    writeAdminPortalLock();
+    claimAdminPortalLock();
   }, ADMIN_PORTAL_HEARTBEAT_MS);
 }
 
@@ -1173,10 +1165,7 @@ function initializeAdminPortalLock() {
     stopAdminPortalHeartbeat();
     return;
   }
-  if (!claimAdminPortalLock()) {
-    handleAdminPortalLockConflict();
-    return;
-  }
+  claimAdminPortalLock();
   startAdminPortalHeartbeat();
 }
 
@@ -1260,10 +1249,6 @@ function syncAdminAccess() {
 }
 
 function showAdminLogin() {
-  if (isAdminPortalLockedByAnotherTab()) {
-    showToast('⚠️ Admin portal is already open in another tab');
-    return;
-  }
   if (isAdminLoggedIn) {
     window.open(getAdminPortalUrl(), '_blank', 'noopener');
   } else {
@@ -1275,12 +1260,6 @@ function verifyAdmin() {
   const username = document.getElementById('adminUsername').value.trim().toLowerCase();
   const password = document.getElementById('adminPassword').value;
   const errorEl = document.getElementById('adminLoginError');
-
-  if (isAdminPortalLockedByAnotherTab()) {
-    errorEl.textContent = 'Admin portal is already open in another tab.';
-    errorEl.style.display = 'block';
-    return;
-  }
 
   fetch(`${API_BASE}/admin/login`, {
     method: 'POST',
