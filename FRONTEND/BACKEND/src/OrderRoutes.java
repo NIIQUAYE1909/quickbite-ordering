@@ -467,6 +467,8 @@ public class OrderRoutes implements HttpHandler {
                 "id INT AUTO_INCREMENT PRIMARY KEY," +
                 "order_id INT NOT NULL," +
                 "food_id INT NOT NULL," +
+                "item_name VARCHAR(255)," +
+                "customization_summary VARCHAR(255)," +
                 "item_code VARCHAR(32) UNIQUE," +
                 "quantity INT NOT NULL DEFAULT 1," +
                 "price DECIMAL(10,2) NOT NULL," +
@@ -475,6 +477,7 @@ public class OrderRoutes implements HttpHandler {
                 ")";
             conn.prepareStatement(createSql).execute();
             ensureOrderItemCodeColumn(conn);
+            ensureOrderItemDetailsColumns(conn);
         } catch (SQLException e) {
             System.out.println("Could not ensure order_items table: " + e.getMessage());
         }
@@ -488,6 +491,20 @@ public class OrderRoutes implements HttpHandler {
             }
         } catch (SQLException e) {
             System.out.println("Could not ensure item_code column: " + e.getMessage());
+        }
+    }
+
+    private void ensureOrderItemDetailsColumns(Connection conn) {
+        try {
+            DatabaseMetaData meta = conn.getMetaData();
+            if (!hasColumn(meta, "order_items", "item_name")) {
+                conn.prepareStatement("ALTER TABLE order_items ADD COLUMN item_name VARCHAR(255)").execute();
+            }
+            if (!hasColumn(meta, "order_items", "customization_summary")) {
+                conn.prepareStatement("ALTER TABLE order_items ADD COLUMN customization_summary VARCHAR(255)").execute();
+            }
+        } catch (SQLException e) {
+            System.out.println("Could not ensure order item detail columns: " + e.getMessage());
         }
     }
 
@@ -599,7 +616,7 @@ public class OrderRoutes implements HttpHandler {
         List<OrderItemPayload> items = parseOrderItems(body);
         if (items.isEmpty()) return;
 
-        String sql = "INSERT INTO order_items (order_id, food_id, item_code, quantity, price) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO order_items (order_id, food_id, item_name, customization_summary, item_code, quantity, price) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             int inserted = 0;
             for (OrderItemPayload item : items) {
@@ -607,9 +624,11 @@ public class OrderRoutes implements HttpHandler {
                 String itemCode = generateUniqueItemCode(conn);
                 stmt.setInt(1, orderId);
                 stmt.setInt(2, item.foodId);
-                stmt.setString(3, itemCode);
-                stmt.setInt(4, item.quantity);
-                stmt.setDouble(5, item.price);
+                stmt.setString(3, item.itemName);
+                stmt.setString(4, item.customizationSummary);
+                stmt.setString(5, itemCode);
+                stmt.setInt(6, item.quantity);
+                stmt.setDouble(7, item.price);
                 stmt.addBatch();
                 inserted++;
             }
@@ -634,7 +653,9 @@ public class OrderRoutes implements HttpHandler {
             int quantity = (int) parseJsonNumber(itemJson, "qty");
             if (quantity <= 0) quantity = (int) parseJsonNumber(itemJson, "quantity");
             double price = parseJsonNumber(itemJson, "price");
-            items.add(new OrderItemPayload(foodId, quantity <= 0 ? 1 : quantity, price));
+            String itemName = extractJsonValue(itemJson, "name");
+            String customizationSummary = extractJsonValue(itemJson, "customization_summary");
+            items.add(new OrderItemPayload(foodId, quantity <= 0 ? 1 : quantity, price, itemName, customizationSummary));
         }
         return items;
     }
@@ -683,7 +704,7 @@ public class OrderRoutes implements HttpHandler {
     }
 
     private String getOrderItemsJson(Connection conn, int orderId) {
-        String sql = "SELECT oi.food_id, oi.item_code, oi.quantity, oi.price, f.name, f.emoji " +
+        String sql = "SELECT oi.food_id, oi.item_code, oi.quantity, oi.price, oi.item_name, oi.customization_summary, f.name, f.emoji " +
                      "FROM order_items oi LEFT JOIN foods f ON oi.food_id = f.id " +
                      "WHERE oi.order_id = ? ORDER BY oi.id ASC";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -696,9 +717,10 @@ public class OrderRoutes implements HttpHandler {
                 json.append("{")
                     .append("\"id\":").append(rs.getInt("food_id")).append(",")
                     .append("\"item_code\":\"").append(escapeJson(rs.getString("item_code"))).append("\",")
-                    .append("\"name\":\"").append(escapeJson(rs.getString("name"))).append("\",")
+                    .append("\"name\":\"").append(escapeJson(preferValue(rs.getString("item_name"), rs.getString("name")))).append("\",")
                     .append("\"emoji\":\"").append(escapeJson(rs.getString("emoji"))).append("\",")
                     .append("\"qty\":").append(rs.getInt("quantity")).append(",")
+                    .append("\"customization_summary\":\"").append(escapeJson(rs.getString("customization_summary"))).append("\",")
                     .append("\"price\":").append(rs.getDouble("price"))
                     .append("}");
                 first = false;
@@ -708,6 +730,10 @@ public class OrderRoutes implements HttpHandler {
         } catch (SQLException e) {
             return "[]";
         }
+    }
+
+    private String preferValue(String primary, String fallback) {
+        return primary != null && !primary.trim().isEmpty() ? primary : fallback;
     }
 
     private String generateUniqueItemCode(Connection conn) {
@@ -742,11 +768,15 @@ public class OrderRoutes implements HttpHandler {
         final int foodId;
         final int quantity;
         final double price;
+        final String itemName;
+        final String customizationSummary;
 
-        OrderItemPayload(int foodId, int quantity, double price) {
+        OrderItemPayload(int foodId, int quantity, double price, String itemName, String customizationSummary) {
             this.foodId = foodId;
             this.quantity = quantity;
             this.price = price;
+            this.itemName = itemName;
+            this.customizationSummary = customizationSummary;
         }
     }
 

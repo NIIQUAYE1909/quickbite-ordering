@@ -106,6 +106,44 @@ const promoCodes = {
   'LOCAL20':   { type: 'percent', value: 20, desc: '20% off local dishes' }
 };
 
+const foodCustomizations = {
+  'Waakye Special': [
+    { id: 'fish', label: 'Fried fish', deduction: 6 },
+    { id: 'egg', label: 'Boiled egg', deduction: 3 },
+    { id: 'spaghetti', label: 'Spaghetti', deduction: 2 },
+    { id: 'stew', label: 'Stew', deduction: 2 },
+    { id: 'kelewele', label: 'Kelewele', deduction: 4 }
+  ],
+  'Grilled Chicken Combo': [
+    { id: 'drink', label: 'Chilled drink', deduction: 5 },
+    { id: 'coleslaw', label: 'Coleslaw', deduction: 3 },
+    { id: 'jollof', label: 'Jollof rice', deduction: 10 }
+  ],
+  'Banku & Tilapia': [
+    { id: 'pepper', label: 'Pepper sauce', deduction: 3 },
+    { id: 'vegetable', label: 'Vegetable garnish', deduction: 2 }
+  ],
+  'Jollof Rice Special': [
+    { id: 'plantain', label: 'Fried plantain', deduction: 4 },
+    { id: 'coleslaw', label: 'Coleslaw', deduction: 3 },
+    { id: 'protein', label: 'Protein topping', deduction: 8 }
+  ],
+  'Chocolate Lava Cake': [
+    { id: 'icecream', label: 'Vanilla ice cream', deduction: 4 },
+    { id: 'berries', label: 'Berry garnish', deduction: 2 }
+  ],
+  'Cheese Burger Deluxe': [
+    { id: 'bacon', label: 'Bacon', deduction: 5 },
+    { id: 'triple-cheese', label: 'Extra cheese', deduction: 4 },
+    { id: 'pickle', label: 'Pickle', deduction: 2 }
+  ],
+  'Double Smash Burger': [
+    { id: 'onions', label: 'Caramelized onions', deduction: 2 },
+    { id: 'sauce', label: 'Special sauce', deduction: 2 },
+    { id: 'cheddar', label: 'Cheddar', deduction: 3 }
+  ]
+};
+
 // ---------- STATE ----------
 let cart = [];
 let wishlist = [];
@@ -119,6 +157,7 @@ let deliveryFee = 5;
 let trackedOrdersHistory = [];
 let pendingComplaints = [];
 let isSubmittingOrder = false;
+let activeFoodCustomization = null;
 
 const PASSWORD_RULES = {
   minLength: 8,
@@ -357,6 +396,110 @@ function loadState() {
   }
 }
 
+function getFoodCustomizationOptions(item) {
+  return foodCustomizations[item?.name] || [];
+}
+
+function getRemovedOptions(options, removedIds = []) {
+  return options.filter((option) => removedIds.includes(option.id));
+}
+
+function getCustomizationSignature(removedIds = []) {
+  return [...removedIds].sort().join('|');
+}
+
+function getCustomizedPrice(item, removedIds = []) {
+  const options = getFoodCustomizationOptions(item);
+  const totalDeduction = getRemovedOptions(options, removedIds)
+    .reduce((sum, option) => sum + option.deduction, 0);
+  return Math.max(0, Number(item.price || 0) - totalDeduction);
+}
+
+function formatCustomizationSummary(removedOptions = []) {
+  if (!removedOptions.length) return 'As shown on menu';
+  return `No ${removedOptions.map((option) => option.label).join(', ')}`;
+}
+
+function buildCartItem(item, removedIds = []) {
+  const options = getFoodCustomizationOptions(item);
+  const removedOptions = getRemovedOptions(options, removedIds);
+  const customizedPrice = getCustomizedPrice(item, removedIds);
+  const customizationSummary = formatCustomizationSummary(removedOptions);
+
+  return {
+    ...item,
+    price: customizedPrice,
+    basePrice: Number(item.price || 0),
+    qty: 1,
+    customization_signature: getCustomizationSignature(removedIds),
+    customization_summary: customizationSummary,
+    removed_option_ids: removedOptions.map((option) => option.id),
+    removed_options: removedOptions
+  };
+}
+
+function addConfiguredItemToCart(item, removedIds = []) {
+  if (!item) return;
+
+  const configuredItem = buildCartItem(item, removedIds);
+  const existing = cart.find((cartItem) =>
+    cartItem.id === item.id && (cartItem.customization_signature || '') === configuredItem.customization_signature
+  );
+
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    cart.push(configuredItem);
+  }
+
+  updateCartUI();
+  saveState();
+  showToast(`${item.emoji} ${item.name} added to cart!`);
+  if (!currentUser) {
+    setAuthFeedback('loginFeedback', 'You can browse and build your cart first. Sign in when you are ready to checkout.');
+  }
+
+  const cc = document.getElementById('cartCount');
+  cc.classList.add('bump');
+  setTimeout(() => cc.classList.remove('bump'), 300);
+}
+
+function updateFoodCustomizationState(itemId) {
+  const item = menuData.find((menuItem) => menuItem.id === itemId);
+  if (!item) return;
+
+  const options = getFoodCustomizationOptions(item);
+  const removedIds = options
+    .filter((option) => {
+      const checkbox = document.querySelector(`input[data-option-id="${option.id}"]`);
+      return checkbox && !checkbox.checked;
+    })
+    .map((option) => option.id);
+
+  const removedOptions = getRemovedOptions(options, removedIds);
+  const price = getCustomizedPrice(item, removedIds);
+  activeFoodCustomization = {
+    itemId,
+    removedIds,
+    removedOptions,
+    price
+  };
+
+  const priceEl = document.getElementById('foodModalPrice');
+  const summaryEl = document.getElementById('foodCustomizationSummary');
+  if (priceEl) priceEl.textContent = `GH₵ ${price.toFixed(2)}`;
+  if (summaryEl) summaryEl.textContent = formatCustomizationSummary(removedOptions);
+}
+
+function addCurrentFoodCustomizationToCart(itemId) {
+  const removedIds = activeFoodCustomization?.itemId === itemId
+    ? activeFoodCustomization.removedIds
+    : [];
+  const item = menuData.find((menuItem) => menuItem.id === itemId);
+  addConfiguredItemToCart(item, removedIds);
+  closeModal('foodModal');
+}
+
 // ---------- RENDER MENU ----------
 function renderMenu(items) {
   const grid  = document.getElementById('menuGrid');
@@ -410,43 +553,47 @@ function showFoodDetails(itemId) {
 
   const inCart = cart.find(c => c.id === itemId);
   const isWishlisted = wishlist.some(w => w.id === itemId);
+  const customizationOptions = getFoodCustomizationOptions(item);
+  activeFoodCustomization = {
+    itemId,
+    removedIds: [],
+    removedOptions: [],
+    price: Number(item.price || 0)
+  };
 
-  document.getElementById('foodModalBody').innerHTML = `
-    <div style="text-align:center;">
-      ${item.imageUrl
+  document.getElementById('foodModalBody').innerHTML =     `<div style="text-align:center;">      ${item.imageUrl
         ? `<img src="${item.imageUrl}" alt="${item.name}" class="food-modal-photo" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"/><div class="food-modal-emoji-display" style="display:none;">${item.emoji}</div>`
-        : `<div style="font-size:5.5rem; margin-bottom:1rem; line-height:1;">${item.emoji}</div>`}
-      ${item.badge ? `<span class="menu-badge" style="position:relative; display:inline-block; margin-bottom:0.8rem;">${item.badge}</span><br/>` : ''}
-      <h2 style="font-family:'Playfair Display',serif; margin-bottom:0.4rem;">${item.name}</h2>
-      <p style="color:var(--muted); margin-bottom:1rem; font-size:0.88rem;">${item.description}</p>
-
-      <div style="display:flex; gap:1.5rem; justify-content:center; margin-bottom:1.2rem; flex-wrap:wrap;">
-        <div style="text-align:center;">
-          <div style="font-size:1rem;">⭐</div>
-          <div style="font-size:0.8rem; color:var(--muted);">${item.rating} (${item.reviews} reviews)</div>
+        : `<div style="font-size:5.5rem; margin-bottom:1rem; line-height:1;">${item.emoji}</div>`}      ${item.badge ? `<span class="menu-badge" style="position:relative; display:inline-block; margin-bottom:0.8rem;">${item.badge}</span><br/>` : ''}      <h2 style="font-family:'Playfair Display',serif; margin-bottom:0.4rem;">${item.name}</h2>      <p style="color:var(--muted); margin-bottom:1rem; font-size:0.88rem;">${item.description}</p>      <div style="display:flex; gap:1.5rem; justify-content:center; margin-bottom:1.2rem; flex-wrap:wrap;">        <div style="text-align:center;">          <div style="font-size:1rem;">?</div>          <div style="font-size:0.8rem; color:var(--muted);">${item.rating} (${item.reviews} reviews)</div>        </div>        <div style="text-align:center;">          <div style="font-size:1rem;">??</div>          <div style="font-size:0.8rem; color:var(--muted);">${item.prepTime}</div>        </div>        <div style="text-align:center;">          <div style="font-size:1rem;">??</div>          <div style="font-size:0.8rem; color:var(--muted);">${item.calories} cal</div>        </div>      </div>      <div style="font-size:2rem; font-weight:700; color:var(--accent); margin-bottom:1rem; font-family:'Playfair Display',serif;">        <span id="foodModalPrice">GH? ${item.price.toFixed(2)}</span>      </div>      ${customizationOptions.length ? `
+        <div class="food-customization-panel">
+          <div class="food-customization-head">
+            <strong>Customize this plate</strong>
+            <span>Keep the same food picture, or untick anything you want removed and the price will reduce.</span>
+          </div>
+          <div class="food-customization-list">
+            ${customizationOptions.map((option) => `
+              <label class="food-customization-option">
+                <span>
+                  <input type="checkbox" checked data-option-id="${option.id}" onchange="updateFoodCustomizationState(${item.id})"/>
+                  ${option.label}
+                </span>
+                <b>-GH? ${option.deduction.toFixed(2)}</b>
+              </label>
+            `).join('')}
+          </div>
+          <div class="food-customization-summary">
+            <span>Current selection</span>
+            <b id="foodCustomizationSummary">As shown on menu</b>
+          </div>
         </div>
-        <div style="text-align:center;">
-          <div style="font-size:1rem;">⏱️</div>
-          <div style="font-size:0.8rem; color:var(--muted);">${item.prepTime}</div>
+      ` : `
+        <div class="food-customization-panel">
+          <div class="food-customization-head">
+            <strong>Served as shown</strong>
+            <span>This item is currently ordered exactly as displayed on the menu.</span>
+          </div>
         </div>
-        <div style="text-align:center;">
-          <div style="font-size:1rem;">🔥</div>
-          <div style="font-size:0.8rem; color:var(--muted);">${item.calories} cal</div>
-        </div>
-      </div>
-
-      <div style="font-size:2rem; font-weight:700; color:var(--accent); margin-bottom:1.5rem; font-family:'Playfair Display',serif;">
-        GH₵ ${item.price.toFixed(2)}
-      </div>
-
-      <button class="btn-primary full" onclick="addToCart(${item.id}); closeModal('foodModal');">
-        ${inCart ? '+ Add Another' : '+ Add to Cart'}
-      </button>
-      <button onclick="toggleWishlistItem(${item.id}); closeModal('foodModal');"
-        style="width:100%; background:transparent; border:1px solid var(--border2); color:${isWishlisted ? '#ff6b8a' : 'var(--muted)'}; padding:0.7rem; border-radius:12px; font-size:0.88rem; cursor:pointer; margin-top:0.6rem; transition:all 0.2s; font-family:'DM Sans',sans-serif;">
-        ${isWishlisted ? '♥ Remove from Favourites' : '♡ Add to Favourites'}
-      </button>
-    </div>`;
+      `}      <button class="btn-primary full" onclick="addCurrentFoodCustomizationToCart(${item.id});">        ${inCart ? '+ Add Another Plate' : '+ Add to Cart'}      </button>      <button onclick="toggleWishlistItem(${item.id}); closeModal('foodModal');"
+        style="width:100%; background:transparent; border:1px solid var(--border2); color:${isWishlisted ? '#ff6b8a' : 'var(--muted)'}; padding:0.7rem; border-radius:12px; font-size:0.88rem; cursor:pointer; margin-top:0.6rem; transition:all 0.2s; font-family:'DM Sans',sans-serif;">        ${isWishlisted ? '? Remove from Favourites' : '? Add to Favourites'}      </button>    </div>`;
 
   showModal('foodModal');
 }
@@ -506,30 +653,11 @@ function applyFilters() {
 // ---------- CART ----------
 function addToCart(itemId) {
   const item = menuData.find(i => i.id === itemId);
-  if (!item) return;
-
-  const existing = cart.find(c => c.id === itemId);
-  if (existing) {
-    existing.qty += 1;
-  } else {
-    cart.push({ ...item, qty: 1 });
-  }
-
-  updateCartUI();
-  saveState();
-  showToast(`${item.emoji} ${item.name} added to cart!`);
-  if (!currentUser) {
-    setAuthFeedback('loginFeedback', 'You can browse and build your cart first. Sign in when you are ready to checkout.');
-  }
-
-  // Bump animation on cart count
-  const cc = document.getElementById('cartCount');
-  cc.classList.add('bump');
-  setTimeout(() => cc.classList.remove('bump'), 300);
+  addConfiguredItemToCart(item);
 }
 
-function changeQty(itemId, change) {
-  const item = cart.find(c => c.id === itemId);
+function changeQty(itemId, change, customizationSignature = '') {
+  const item = cart.find(c => c.id === itemId && (c.customization_signature || '') === customizationSignature);
   if (!item) return;
 
   item.qty += change;
@@ -577,12 +705,13 @@ function updateCartUI() {
       <div class="cart-item-emoji">${item.emoji}</div>
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
+        <div class="cart-item-meta">${item.customization_summary || 'As shown on menu'}</div>
         <div class="cart-item-price">GH₵ ${(item.price * item.qty).toFixed(2)}</div>
       </div>
       <div class="cart-item-qty">
-        <button class="qty-btn" onclick="changeQty(${item.id}, -1)">−</button>
+        <button class="qty-btn" onclick="changeQty(${item.id}, -1, '${item.customization_signature || ''}')">−</button>
         <span class="qty-num">${item.qty}</span>
-        <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
+        <button class="qty-btn" onclick="changeQty(${item.id}, 1, '${item.customization_signature || ''}')">+</button>
       </div>
     </div>`).join('');
 
@@ -778,7 +907,7 @@ function renderCheckoutSummary() {
 
   summaryEl.innerHTML = cart.map(item => `
     <div class="checkout-summary-item">
-      <span>${item.emoji} ${item.name} × ${item.qty}</span>
+      <span>${item.emoji} ${item.name} × ${item.qty}<br/><small>${item.customization_summary || 'As shown on menu'}</small></span>
       <span>GH₵ ${(item.price * item.qty).toFixed(2)}</span>
     </div>`).join('');
 
@@ -890,7 +1019,14 @@ async function placeOrder() {
     phone: phone,
     address: fullAddress,
     total: grandTotal,
-    items: cart.map(i => ({ id: i.id, qty: i.qty, price: i.price }))
+    items: cart.map(i => ({
+      id: i.id,
+      qty: i.qty,
+      price: i.price,
+      name: i.name,
+      customization_summary: i.customization_summary || '',
+      customization_signature: i.customization_signature || ''
+    }))
   };
 
   // Data for local display (complex format)
@@ -902,7 +1038,14 @@ async function placeOrder() {
     phone,
     address: fullAddress,
     landmark,
-    items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price })),
+    items: cart.map(i => ({
+      id: i.id,
+      name: i.name,
+      qty: i.qty,
+      price: i.price,
+      customization_summary: i.customization_summary || '',
+      customization_signature: i.customization_signature || ''
+    })),
     subtotal, discount, deliveryFee, grandTotal,
     payment: method,
     instructions,
@@ -1026,7 +1169,7 @@ function renderOrders() {
     <div class="order-card">
       <div class="order-info">
         <strong>Order ${order.id}</strong>
-        <span>${order.items.map(i => `${i.emoji || ''} ${i.name} ×${i.qty}`).join(' · ')}</span><br/>
+        <span>${order.items.map(i => `${i.emoji || ''} ${i.name} ×${i.qty || i.quantity || 1}${i.customization_summary ? ` <small style="color:var(--muted);">(${i.customization_summary})</small>` : ''}`).join(' · ')}</span><br/>
         <span style="margin-top:0.15rem; display:block;">${order.time || formatOrderDate(order.orderedAt)}</span>
         ${order.sync_status === 'offline' ? `<span style="margin-top:0.2rem; display:block; color:var(--accent2); font-size:0.8rem;">Saved offline on this device. Backend sync is still pending.</span>` : ''}
       </div>
@@ -1048,7 +1191,8 @@ function renderOrders() {
     span.innerHTML = order.items.map((item) => {
       const qty = item.qty || item.quantity || 1;
       const refLine = item.item_code ? ` <small style="display:block; color:var(--muted);">Ref: ${item.item_code}</small>` : '';
-      return `${item.emoji || ''} ${item.name || 'Item'} x${qty}${refLine}`;
+      const summaryLine = item.customization_summary ? ` <small style="display:block; color:var(--muted);">${item.customization_summary}</small>` : '';
+      return `${item.emoji || ''} ${item.name || 'Item'} x${qty}${refLine}${summaryLine}`;
     }).join(' · ');
   });
 }
@@ -1509,9 +1653,16 @@ function reorder(orderId) {
   order.items.forEach(i => {
     const menuItem = menuData.find(m => m.id === i.id);
     if (!menuItem) return;
-    const existing = cart.find(c => c.id === i.id);
+    const configuredItem = {
+      ...buildCartItem(menuItem, []),
+      qty: i.qty,
+      price: Number(i.price || menuItem.price),
+      customization_summary: i.customization_summary || 'As shown on menu',
+      customization_signature: i.customization_signature || ''
+    };
+    const existing = cart.find(c => c.id === i.id && (c.customization_signature || '') === configuredItem.customization_signature);
     if (existing) existing.qty += i.qty;
-    else cart.push({ ...menuItem, qty: i.qty });
+    else cart.push(configuredItem);
   });
 
   updateCartUI();
@@ -1721,7 +1872,7 @@ function formatOrderDate(dateValue) {
 
 function formatOrderItems(items) {
   if (!Array.isArray(items) || items.length === 0) return 'No item data';
-  return items.map(i => `${i.emoji || ''} ${i.name || 'Item'} x${i.qty || i.quantity || 1}`).join(' · ');
+  return items.map(i => `${i.emoji || ''} ${i.name || 'Item'} x${i.qty || i.quantity || 1}${i.customization_summary ? ` (${i.customization_summary})` : ''}`).join(' · ');
 }
 
 function recordTrackedOrder(trackData) {

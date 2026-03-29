@@ -1043,6 +1043,84 @@ body::before {
   line-height: 1;
 }
 
+.food-customization-panel {
+  margin: 0 0 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 92, 26, 0.08), rgba(255, 92, 26, 0.02));
+  text-align: left;
+}
+
+.food-customization-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.85rem;
+}
+
+.food-customization-head strong {
+  font-size: 0.95rem;
+}
+
+.food-customization-head span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.food-customization-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.food-customization-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border2);
+  font-size: 0.84rem;
+}
+
+.food-customization-option span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.food-customization-option input {
+  accent-color: var(--accent);
+}
+
+.food-customization-option b {
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.food-customization-summary {
+  margin-top: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.food-customization-summary b {
+  color: var(--text);
+  text-align: right;
+}
+
+.cart-item-meta {
+  font-size: 0.73rem;
+  color: var(--muted);
+  margin-top: 0.1rem;
+}
+
 .menu-card-footer {
   display: flex;
   justify-content: space-between;
