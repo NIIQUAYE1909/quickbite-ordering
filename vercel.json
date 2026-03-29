@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    { "source": "/style.css", "destination": "/FRONTEND/style.css" },
+    { "source": "/main.js", "destination": "/FRONTEND/main.js" },
+    { "source": "/env.js", "destination": "/FRONTEND/env.js" },
+    { "source": "/favicon.svg", "destination": "/FRONTEND/favicon.svg" },
+    { "source": "/assets/(.*)", "destination": "/FRONTEND/assets/$1" },
+    { "source": "/(.*)", "destination": "/FRONTEND/index.html" }
+  ]
+}
