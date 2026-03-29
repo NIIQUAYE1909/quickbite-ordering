@@ -578,6 +578,40 @@
   <!-- ========== TOAST NOTIFICATION ========== -->
   <div class="toast" id="toast"></div>
 
+  <div class="modal-overlay" id="refundPolicyModal" onclick="closeModalOutside(event, 'refundPolicyModal')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('refundPolicyModal')">✕</button>
+      <h2>Refund Policy</h2>
+      <p class="modal-sub">We want every order to arrive correctly and on time.</p>
+      <div class="form-group">
+        <p>If your order arrives damaged, incomplete, or significantly delayed, contact support as soon as possible with your order ID and item code.</p>
+      </div>
+      <div class="form-group">
+        <p>Eligible cases may receive a replacement, store credit, or refund after review. Approved refunds are sent back to the original payment method where possible.</p>
+      </div>
+      <div class="form-group">
+        <p>Concerns are reviewed case by case, so the fastest route is the in-app concern form or the support email in the footer.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="privacyPolicyModal" onclick="closeModalOutside(event, 'privacyPolicyModal')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('privacyPolicyModal')">✕</button>
+      <h2>Privacy Policy</h2>
+      <p class="modal-sub">QuickBite uses your information only to run and improve your orders.</p>
+      <div class="form-group">
+        <p>We store details like your name, email, phone number, delivery address, and order history so we can process payments, deliver food, and send updates.</p>
+      </div>
+      <div class="form-group">
+        <p>Driver tracking and delivery notes are used only for active deliveries and customer support.</p>
+      </div>
+      <div class="form-group">
+        <p>We do not ask for more information than needed to complete your order. If you want help with your data, contact support through the email listed below.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- ========== FOOTER ========== -->
   <footer>
     <div class="footer-content">
@@ -593,17 +627,17 @@
       </div>
       <div class="footer-links">
         <h5>Quick Links</h5>
-        <a href="#menu">Menu</a>
-        <a href="#orders">My Orders</a>
-        <a href="#" onclick="showModal('trackModal')">Track Order</a>
-        <a href="#" onclick="showModal('loginModal')">Sign In</a>
+        <a href="#menu" onclick="scrollToSection('menu'); return false;">Menu</a>
+        <a href="#orders" onclick="scrollToSection('orders'); return false;">My Orders</a>
+        <a href="#" onclick="showModal('trackModal'); return false;">Track Order</a>
+        <a href="#" onclick="showModal('loginModal'); return false;">Sign In</a>
       </div>
       <div class="footer-links">
         <h5>Support</h5>
-        <a href="#" onclick="showModal('complaintModal')">Submit Concern</a>
-        <a href="#">Contact Us</a>
-        <a href="#">Refund Policy</a>
-        <a href="#">Privacy Policy</a>
+        <a href="#" onclick="showModal('complaintModal'); return false;">Submit Concern</a>
+        <a href="mailto:quayen010@gmail.com?subject=QuickBite%20Support">Contact Us</a>
+        <a href="#" onclick="showModal('refundPolicyModal'); return false;">Refund Policy</a>
+        <a href="#" onclick="showModal('privacyPolicyModal'); return false;">Privacy Policy</a>
       </div>
       <div class="footer-links">
         <h5>Contact</h5>
