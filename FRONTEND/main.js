@@ -95,6 +95,55 @@ const menuData = [
     price: 65.00, emoji: "🍗", category: "chicken", rating: 4.9, reviews: 330, badge: "HOT",
     prepTime: "20–25 min", calories: 760, popular: true
   }
+  ,
+  {
+    id: 16, name: "Fufu & Light Soup",
+    description: "Soft pounded cassava fufu served with rich light soup and tender goat meat",
+    price: 48.00, emoji: "🍲", category: "local", rating: 4.8, reviews: 142, badge: "LOCAL FAV",
+    prepTime: "20-25 min", calories: 710, popular: true
+  },
+  {
+    id: 17, name: "Kenkey & Fried Fish",
+    description: "Ga kenkey with crispy fried fish, shito, onions and fresh pepper",
+    price: 34.00, emoji: "🐟", category: "local", rating: 4.7, reviews: 118, badge: null,
+    prepTime: "15-20 min", calories: 640, popular: false
+  },
+  {
+    id: 18, name: "Red Red Bowl",
+    description: "Beans stew served with sweet fried plantain and gari topping",
+    price: 26.00, emoji: "🥘", category: "local", rating: 4.7, reviews: 96, badge: null,
+    prepTime: "10-15 min", calories: 530, popular: false
+  },
+  {
+    id: 19, name: "Ampesi & Kontomire",
+    description: "Boiled yam and plantain served with kontomire stew and smoked fish",
+    price: 38.00, emoji: "🥔", category: "local", rating: 4.8, reviews: 87, badge: null,
+    prepTime: "15-20 min", calories: 600, popular: false
+  },
+  {
+    id: 20, name: "Tuo Zaafi Special",
+    description: "Northern-style tuo zaafi served with ayoyo soup and tender beef",
+    price: 42.00, emoji: "🍲", category: "local", rating: 4.8, reviews: 74, badge: "CHEF PICK",
+    prepTime: "20-25 min", calories: 670, popular: false
+  },
+  {
+    id: 21, name: "Crispy Chicken Burger",
+    description: "Crunchy chicken fillet, lettuce, spicy mayo and pickles on a toasted bun",
+    price: 52.00, emoji: "🍔", category: "burger", rating: 4.7, reviews: 109, badge: null,
+    prepTime: "15-20 min", calories: 770, popular: false
+  },
+  {
+    id: 22, name: "Caramel Choco Brownie",
+    description: "Fudgy chocolate brownie topped with caramel drizzle and vanilla cream",
+    price: 24.00, emoji: "🍫", category: "dessert", rating: 4.7, reviews: 64, badge: null,
+    prepTime: "5 min", calories: 450, popular: false
+  },
+  {
+    id: 23, name: "Lamugin Cooler",
+    description: "Refreshing northern spice drink with milk, ginger and cloves served cold",
+    price: 18.00, emoji: "🥛", category: "drinks", rating: 4.6, reviews: 58, badge: null,
+    prepTime: "3 min", calories: 160, popular: false
+  }
 ];
 
 // ---------- PROMO CODES ----------

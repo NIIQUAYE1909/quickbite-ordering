@@ -157,7 +157,18 @@ INSERT INTO foods (name, description, price, emoji, category, rating, badge) VAL
 ('Banku & Tilapia',       'Freshly made banku with whole grilled tilapia and pepper sauce',        45.00, '🐟', 'local',   4.9, 'LOCAL FAV'),
 ('Chocolate Lava Cake',   'Warm chocolate cake with a gooey molten center, vanilla ice cream',     28.00, '🍰', 'dessert', 4.7, NULL),
 ('Fresh Fruit Smoothie',  'Blended mango, pineapple, strawberry with a hint of ginger',            20.00, '🥤', 'drinks',  4.6, NULL),
-('Cheese Burger Deluxe',  'Juicy beef patty, bacon, triple cheese, lettuce, tomato & pickle',      60.00, '🍔', 'burger',  4.8, NULL);
+('Cheese Burger Deluxe',  'Juicy beef patty, bacon, triple cheese, lettuce, tomato & pickle',      60.00, '🍔', 'burger',  4.8, NULL),
+('Jollof Rice Special',   'Party jollof rice with fried plantain, coleslaw & your choice of protein', 40.00, '🍚', 'local', 4.9, 'BESTSELLER'),
+('Strawberry Cheesecake', 'Creamy New York cheesecake on graham cracker crust, topped with strawberry coulis', 32.00, '🍓', 'dessert', 4.8, NULL),
+('Sobolo Delight',        'Chilled hibiscus drink with ginger, mint & a squeeze of lime',          15.00, '🍹', 'drinks',  4.8, 'LOCAL FAV'),
+('Fufu & Light Soup',     'Soft pounded cassava fufu served with rich light soup and tender goat meat', 48.00, '🍲', 'local', 4.8, 'LOCAL FAV'),
+('Kenkey & Fried Fish',   'Ga kenkey with crispy fried fish, shito, onions and fresh pepper',      34.00, '🐟', 'local',   4.7, NULL),
+('Red Red Bowl',          'Beans stew served with sweet fried plantain and gari topping',           26.00, '🥘', 'local',   4.7, NULL),
+('Ampesi & Kontomire',    'Boiled yam and plantain served with kontomire stew and smoked fish',    38.00, '🥔', 'local',   4.8, NULL),
+('Tuo Zaafi Special',     'Northern-style tuo zaafi served with ayoyo soup and tender beef',       42.00, '🍲', 'local',   4.8, 'CHEF PICK'),
+('Crispy Chicken Burger', 'Crunchy chicken fillet, lettuce, spicy mayo and pickles on a toasted bun', 52.00, '🍔', 'burger', 4.7, NULL),
+('Caramel Choco Brownie', 'Fudgy chocolate brownie topped with caramel drizzle and vanilla cream', 24.00, '🍫', 'dessert', 4.7, NULL),
+('Lamugin Cooler',        'Refreshing northern spice drink with milk, ginger and cloves served cold', 18.00, '🥛', 'drinks', 4.6, NULL);
 
 -- =============================================
 -- TEST: View your data
