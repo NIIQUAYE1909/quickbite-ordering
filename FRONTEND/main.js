@@ -391,8 +391,8 @@ function getFoodImageForItem(item) {
     { key: 'waakye special', url: 'https://upload.wikimedia.org/wikipedia/commons/7/7e/LOCAL_FOOD_CALLED_WAAKYE_IN_GHANA.jpg' },
     { key: 'jollof rice special', url: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/Jollof_%28Jollof-_Rice%29.jpg' },
     { key: 'fufu & light soup', url: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Goat_Light_Soup_and_Fufu.jpg' },
-    { key: 'kenkey & fried fish', url: 'https://upload.wikimedia.org/wikipedia/commons/8/81/Ga_Kenkey.jpg' },
-    { key: 'ampesi & kontomire', url: 'https://upload.wikimedia.org/wikipedia/commons/e/e1/Ampesi_and_kontomire_stew.jpg' },
+    { key: 'kenkey & fried fish', url: 'https://upload.wikimedia.org/wikipedia/commons/b/b5/Ga_Kenkey.jpg' },
+    { key: 'ampesi & kontomire', url: 'https://upload.wikimedia.org/wikipedia/commons/1/1f/Ampesi_and_kontomire_stew.jpg' },
     { key: 'tuo zaafi special', url: 'https://upload.wikimedia.org/wikipedia/commons/5/57/Tuo_zaafi.jpg' },
     { key: 'grilled chicken combo', url: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=1000&q=80' },
     { key: 'spicy wings', url: 'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=1000&q=80' },
@@ -411,8 +411,8 @@ function getFoodImageForItem(item) {
   if (dishText.includes('waakye')) return 'https://upload.wikimedia.org/wikipedia/commons/7/7e/LOCAL_FOOD_CALLED_WAAKYE_IN_GHANA.jpg';
   if (dishText.includes('jollof')) return 'https://upload.wikimedia.org/wikipedia/commons/0/0d/Jollof_%28Jollof-_Rice%29.jpg';
   if (dishText.includes('fufu') && dishText.includes('light soup')) return 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Goat_Light_Soup_and_Fufu.jpg';
-  if (dishText.includes('kenkey') && dishText.includes('fish')) return 'https://upload.wikimedia.org/wikipedia/commons/8/81/Ga_Kenkey.jpg';
-  if (dishText.includes('ampesi') && dishText.includes('kontomire')) return 'https://upload.wikimedia.org/wikipedia/commons/e/e1/Ampesi_and_kontomire_stew.jpg';
+  if (dishText.includes('kenkey') && dishText.includes('fish')) return 'https://upload.wikimedia.org/wikipedia/commons/b/b5/Ga_Kenkey.jpg';
+  if (dishText.includes('ampesi') && dishText.includes('kontomire')) return 'https://upload.wikimedia.org/wikipedia/commons/1/1f/Ampesi_and_kontomire_stew.jpg';
   if (dishText.includes('tuo zaafi') || dishText.includes('tz special')) return 'https://upload.wikimedia.org/wikipedia/commons/5/57/Tuo_zaafi.jpg';
   if (dishText.includes('sobolo') || dishText.includes('hibiscus')) return 'https://upload.wikimedia.org/wikipedia/commons/a/a0/Zobo%28hibiscus%29_drink.jpg';
 
