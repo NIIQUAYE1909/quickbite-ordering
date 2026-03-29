@@ -349,6 +349,7 @@ window.addEventListener('beforeunload', () => {
     releaseAdminPortalLock();
     stopAdminPortalHeartbeat();
     stopAdminSessionMonitor();
+    stopAdminDataRefresh();
   }
 });
 
@@ -1407,6 +1408,7 @@ const ADMIN_PORTAL_NOTICE_KEY = 'qb_admin_portal_notice';
 const ADMIN_PORTAL_LOCK_TTL_MS = 15000;
 const ADMIN_PORTAL_HEARTBEAT_MS = 5000;
 const ADMIN_SESSION_POLL_MS = 5000;
+const ADMIN_DATA_REFRESH_MS = 15000;
 const adminPortalTabId = (() => {
   const existingTabId = sessionStorage.getItem(ADMIN_PORTAL_TAB_ID_KEY);
   if (existingTabId) return existingTabId;
@@ -1416,6 +1418,7 @@ const adminPortalTabId = (() => {
 })();
 let adminPortalHeartbeat = null;
 let adminSessionMonitor = null;
+let adminDataRefreshTimer = null;
 
 function getAdminHeaders() {
   const token = localStorage.getItem('qb_admin_token') || '';
@@ -1527,6 +1530,26 @@ function stopAdminSessionMonitor() {
   }
 }
 
+function stopAdminDataRefresh() {
+  if (adminDataRefreshTimer) {
+    clearInterval(adminDataRefreshTimer);
+    adminDataRefreshTimer = null;
+  }
+}
+
+function refreshAdminDashboard() {
+  loadAllOrdersAdmin();
+  loadAllComplaintsAdmin();
+}
+
+function startAdminDataRefresh() {
+  stopAdminDataRefresh();
+  if (!isAdminLoggedIn || !isAdminPortal()) return;
+  adminDataRefreshTimer = window.setInterval(() => {
+    refreshAdminDashboard();
+  }, ADMIN_DATA_REFRESH_MS);
+}
+
 function clearAdminClientSession() {
   isAdminLoggedIn = false;
   localStorage.removeItem('qb_admin_logged_in');
@@ -1534,6 +1557,7 @@ function clearAdminClientSession() {
   releaseAdminPortalLock();
   stopAdminPortalHeartbeat();
   stopAdminSessionMonitor();
+  stopAdminDataRefresh();
   syncAdminAccess();
 }
 
@@ -1673,12 +1697,13 @@ function checkAdminLogin() {
   }
   if (isAdminLoggedIn && isAdminPortal()) {
     startAdminSessionMonitor();
-    loadAllOrdersAdmin();
-    loadAllComplaintsAdmin();
+    refreshAdminDashboard();
+    startAdminDataRefresh();
     setTimeout(() => scrollToSection('admin'), 100);
     return;
   }
   stopAdminSessionMonitor();
+  stopAdminDataRefresh();
 }
 
 // ========== ADMIN PANEL FUNCTIONS ==========

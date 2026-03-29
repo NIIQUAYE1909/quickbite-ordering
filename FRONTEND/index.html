@@ -322,7 +322,7 @@
         </div>
         <div class="admin-hero-actions">
           <button class="btn-outline" onclick="logoutAdmin()">Log Out Admin</button>
-          <button class="btn-primary" onclick="loadAllOrdersAdmin()">Refresh Dashboard</button>
+          <button class="btn-primary" onclick="refreshAdminDashboard()">Refresh Dashboard</button>
         </div>
       </div>
 
@@ -335,7 +335,7 @@
               <div class="admin-panel-label">Customer Base</div>
               <h3>Registered Users</h3>
             </div>
-            <button class="btn-outline" onclick="loadAllOrdersAdmin()">Refresh Users</button>
+            <button class="btn-outline" onclick="refreshAdminDashboard()">Refresh Users</button>
           </div>
           <div class="admin-panel-body orders-list" id="adminUsersList">
             <div class="empty-orders">Admin sign-in is required to view customer accounts.</div>
@@ -348,7 +348,7 @@
               <div class="admin-panel-label">Order Flow</div>
               <h3>Live Orders</h3>
             </div>
-            <button class="btn-outline" onclick="loadAllOrdersAdmin()">Refresh Orders</button>
+            <button class="btn-outline" onclick="refreshAdminDashboard()">Refresh Orders</button>
           </div>
           <div class="admin-panel-body orders-list" id="adminOrdersList">
             <div class="empty-orders">Loading orders...</div>
