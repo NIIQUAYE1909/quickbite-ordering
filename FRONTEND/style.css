@@ -871,6 +871,17 @@ body.light-mode .mobile-quickbar {
   transition: border-color 0.3s, transform 0.3s;
 }
 
+.float-card-media {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  object-fit: cover;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.16);
+  background: rgba(255,255,255,0.08);
+}
+
 .float-card.mid { animation-delay: -1s; width: 285px; }
 .float-card:last-child { animation-delay: -2s; }
 .float-card:hover { border-color: var(--accent); transform: translateX(-8px) !important; }
