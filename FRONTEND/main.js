@@ -383,6 +383,49 @@ function prepareMenuData(items) {
   });
 }
 
+function getBundledFoodImage(fileName) {
+  return `assets/foods/${fileName}?v=4`;
+}
+
+function getBundledFoodFallbacks(fileName) {
+  return [
+    `/assets/foods/${fileName}?v=4`,
+    `/FRONTEND/assets/foods/${fileName}?v=4`
+  ];
+}
+
+function getImageFallbackList(imageUrl) {
+  if (!imageUrl || !imageUrl.includes('assets/foods/')) return [];
+  const cleanPath = imageUrl.split('?')[0].replace(/^\/+/, '');
+  return [
+    `/${cleanPath}?v=4`,
+    `/FRONTEND/${cleanPath}?v=4`
+  ];
+}
+
+function handleFoodImageError(img) {
+  if (!img) return;
+
+  let fallbacks = [];
+  try {
+    fallbacks = JSON.parse(img.dataset.fallbacks || '[]');
+  } catch (error) {
+    fallbacks = [];
+  }
+
+  if (fallbacks.length) {
+    const nextSrc = fallbacks.shift();
+    img.dataset.fallbacks = JSON.stringify(fallbacks);
+    img.src = nextSrc;
+    return;
+  }
+
+  img.style.display = 'none';
+  if (img.nextElementSibling) {
+    img.nextElementSibling.style.display = 'inline';
+  }
+}
+
 function getFoodImageForItem(item) {
   const name = (item?.name || '').toLowerCase();
   const description = (item?.description || '').toLowerCase();
@@ -397,11 +440,11 @@ function getFoodImageForItem(item) {
     { key: 'pepperoni pizza', url: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=1000&q=80' },
     { key: 'bbq chicken pizza', url: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=1000&q=80' },
     { key: 'waakye special', url: 'https://upload.wikimedia.org/wikipedia/commons/7/7e/LOCAL_FOOD_CALLED_WAAKYE_IN_GHANA.jpg?v=2' },
-    { key: 'jollof rice special', url: '/assets/foods/jollof-rice.jpg?v=3' },
-    { key: 'fufu & light soup', url: '/assets/foods/fufu-light-soup.jpg?v=3' },
-    { key: 'kenkey & fried fish', url: '/assets/foods/kenkey-fried-fish.jpg?v=3' },
-    { key: 'ampesi & kontomire', url: '/assets/foods/ampesi-kontomire.jpg?v=3' },
-    { key: 'tuo zaafi special', url: '/assets/foods/tuo-zaafi.jpg?v=3' },
+    { key: 'jollof rice special', url: getBundledFoodImage('jollof-rice.jpg') },
+    { key: 'fufu & light soup', url: getBundledFoodImage('fufu-light-soup.jpg') },
+    { key: 'kenkey & fried fish', url: getBundledFoodImage('kenkey-fried-fish.jpg') },
+    { key: 'ampesi & kontomire', url: getBundledFoodImage('ampesi-kontomire.jpg') },
+    { key: 'tuo zaafi special', url: getBundledFoodImage('tuo-zaafi.jpg') },
     { key: 'grilled chicken combo', url: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=1000&q=80' },
     { key: 'spicy wings', url: 'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=1000&q=80' },
     { key: 'chicken shawarma', url: 'https://images.unsplash.com/photo-1529006557810-274b9b2fc783?auto=format&fit=crop&w=1000&q=80' },
@@ -409,7 +452,7 @@ function getFoodImageForItem(item) {
     { key: 'chocolate lava cake', url: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Chocolate_lava_cake.jpg' },
     { key: 'strawberry cheesecake', url: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=1000&q=80' },
     { key: 'fresh fruit smoothie', url: 'https://images.unsplash.com/photo-1502741224143-90386d7f8c82?auto=format&fit=crop&w=1000&q=80' },
-    { key: 'sobolo delight', url: '/assets/foods/sobolo-drink.jpg?v=3' }
+    { key: 'sobolo delight', url: getBundledFoodImage('sobolo-drink.jpg') }
   ];
 
   const exact = byName.find((x) => dishText.includes(x.key));
@@ -417,12 +460,12 @@ function getFoodImageForItem(item) {
 
   // Local dishes and drinks often come from the backend with shorter names.
   if (dishText.includes('waakye')) return 'https://upload.wikimedia.org/wikipedia/commons/7/7e/LOCAL_FOOD_CALLED_WAAKYE_IN_GHANA.jpg?v=2';
-  if (dishText.includes('jollof')) return '/assets/foods/jollof-rice.jpg?v=3';
-  if (dishText.includes('fufu') && dishText.includes('light soup')) return '/assets/foods/fufu-light-soup.jpg?v=3';
-  if (dishText.includes('kenkey') && dishText.includes('fish')) return '/assets/foods/kenkey-fried-fish.jpg?v=3';
-  if (dishText.includes('ampesi') && dishText.includes('kontomire')) return '/assets/foods/ampesi-kontomire.jpg?v=3';
-  if (dishText.includes('tuo zaafi') || dishText.includes('tz special')) return '/assets/foods/tuo-zaafi.jpg?v=3';
-  if (dishText.includes('sobolo') || dishText.includes('hibiscus')) return '/assets/foods/sobolo-drink.jpg?v=3';
+  if (dishText.includes('jollof')) return getBundledFoodImage('jollof-rice.jpg');
+  if (dishText.includes('fufu') && dishText.includes('light soup')) return getBundledFoodImage('fufu-light-soup.jpg');
+  if (dishText.includes('kenkey') && dishText.includes('fish')) return getBundledFoodImage('kenkey-fried-fish.jpg');
+  if (dishText.includes('ampesi') && dishText.includes('kontomire')) return getBundledFoodImage('ampesi-kontomire.jpg');
+  if (dishText.includes('tuo zaafi') || dishText.includes('tz special')) return getBundledFoodImage('tuo-zaafi.jpg');
+  if (dishText.includes('sobolo') || dishText.includes('hibiscus')) return getBundledFoodImage('sobolo-drink.jpg');
 
   // Category-based food photos
   if (category === 'burger') return 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1000&q=80';
@@ -584,11 +627,12 @@ function renderMenu(items) {
     const isWishlisted = wishlist.some(w => w.id === item.id);
     const imageLoading = index < 4 ? 'eager' : 'lazy';
     const imagePriority = index < 4 ? 'high' : 'low';
+    const imageFallbacks = item.imageUrl ? JSON.stringify(getImageFallbackList(item.imageUrl)).replace(/"/g, '&quot;') : '[]';
     return `
     <div class="menu-card" style="animation-delay:${index * 0.05}s;" onclick="showFoodDetails(${item.id})">
       <div class="menu-card-img">
         ${item.imageUrl
-          ? `<img src="${item.imageUrl}" alt="${item.name}" class="menu-card-photo" loading="${imageLoading}" fetchpriority="${imagePriority}" decoding="async" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"/><span class="menu-emoji-display" style="display:none;">${item.emoji}</span>`
+          ? `<img src="${item.imageUrl}" alt="${item.name}" class="menu-card-photo" loading="${imageLoading}" fetchpriority="${imagePriority}" decoding="async" data-fallbacks="${imageFallbacks}" onerror="handleFoodImageError(this)"/><span class="menu-emoji-display" style="display:none;">${item.emoji}</span>`
           : `<span>${item.emoji}</span>`}
         ${item.badge ? `<div class="menu-badge">${item.badge}</div>` : ''}
         <button class="card-wishlist-btn ${isWishlisted ? 'liked' : ''}"
@@ -627,9 +671,10 @@ function showFoodDetails(itemId) {
     removedOptions: [],
     price: Number(item.price || 0)
   };
+  const modalImageFallbacks = item.imageUrl ? JSON.stringify(getImageFallbackList(item.imageUrl)).replace(/"/g, '&quot;') : '[]';
 
   document.getElementById('foodModalBody').innerHTML =     `<div style="text-align:center;">      ${item.imageUrl
-        ? `<img src="${item.imageUrl}" alt="${item.name}" class="food-modal-photo" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"/><div class="food-modal-emoji-display" style="display:none;">${item.emoji}</div>`
+        ? `<img src="${item.imageUrl}" alt="${item.name}" class="food-modal-photo" loading="lazy" data-fallbacks="${modalImageFallbacks}" onerror="handleFoodImageError(this)"/><div class="food-modal-emoji-display" style="display:none;">${item.emoji}</div>`
         : `<div style="font-size:5.5rem; margin-bottom:1rem; line-height:1;">${item.emoji}</div>`}      ${item.badge ? `<span class="menu-badge" style="position:relative; display:inline-block; margin-bottom:0.8rem;">${item.badge}</span><br/>` : ''}      <h2 style="font-family:'Playfair Display',serif; margin-bottom:0.4rem;">${item.name}</h2>      <p style="color:var(--muted); margin-bottom:1rem; font-size:0.88rem;">${item.description}</p>      <div style="display:flex; gap:1.5rem; justify-content:center; margin-bottom:1.2rem; flex-wrap:wrap;">        <div style="text-align:center;">          <div style="font-size:1rem;">?</div>          <div style="font-size:0.8rem; color:var(--muted);">${item.rating} (${item.reviews} reviews)</div>        </div>        <div style="text-align:center;">          <div style="font-size:1rem;">??</div>          <div style="font-size:0.8rem; color:var(--muted);">${item.prepTime}</div>        </div>        <div style="text-align:center;">          <div style="font-size:1rem;">??</div>          <div style="font-size:0.8rem; color:var(--muted);">${item.calories} cal</div>        </div>      </div>      <div style="font-size:2rem; font-weight:700; color:var(--accent); margin-bottom:1rem; font-family:'Playfair Display',serif;">        <span id="foodModalPrice">GH? ${item.price.toFixed(2)}</span>      </div>      ${customizationOptions.length ? `
         <div class="food-customization-panel">
           <div class="food-customization-head">
