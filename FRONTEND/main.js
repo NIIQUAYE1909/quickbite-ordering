@@ -416,7 +416,7 @@ function getCustomizedPrice(item, removedIds = []) {
 }
 
 function formatCustomizationSummary(removedOptions = []) {
-  if (!removedOptions.length) return 'As shown on menu';
+  if (!removedOptions.length) return 'Order as shown';
   return `No ${removedOptions.map((option) => option.label).join(', ')}`;
 }
 
@@ -566,8 +566,8 @@ function showFoodDetails(itemId) {
         : `<div style="font-size:5.5rem; margin-bottom:1rem; line-height:1;">${item.emoji}</div>`}      ${item.badge ? `<span class="menu-badge" style="position:relative; display:inline-block; margin-bottom:0.8rem;">${item.badge}</span><br/>` : ''}      <h2 style="font-family:'Playfair Display',serif; margin-bottom:0.4rem;">${item.name}</h2>      <p style="color:var(--muted); margin-bottom:1rem; font-size:0.88rem;">${item.description}</p>      <div style="display:flex; gap:1.5rem; justify-content:center; margin-bottom:1.2rem; flex-wrap:wrap;">        <div style="text-align:center;">          <div style="font-size:1rem;">?</div>          <div style="font-size:0.8rem; color:var(--muted);">${item.rating} (${item.reviews} reviews)</div>        </div>        <div style="text-align:center;">          <div style="font-size:1rem;">??</div>          <div style="font-size:0.8rem; color:var(--muted);">${item.prepTime}</div>        </div>        <div style="text-align:center;">          <div style="font-size:1rem;">??</div>          <div style="font-size:0.8rem; color:var(--muted);">${item.calories} cal</div>        </div>      </div>      <div style="font-size:2rem; font-weight:700; color:var(--accent); margin-bottom:1rem; font-family:'Playfair Display',serif;">        <span id="foodModalPrice">GH? ${item.price.toFixed(2)}</span>      </div>      ${customizationOptions.length ? `
         <div class="food-customization-panel">
           <div class="food-customization-head">
-            <strong>Customize this plate</strong>
-            <span>Keep the same food picture, or untick anything you want removed and the price will reduce.</span>
+            <strong>Order as shown or make changes</strong>
+            <span>Leave every option ticked to order the food exactly as shown, or untick anything you want removed so the price reduces.</span>
           </div>
           <div class="food-customization-list">
             ${customizationOptions.map((option) => `
@@ -581,15 +581,15 @@ function showFoodDetails(itemId) {
             `).join('')}
           </div>
           <div class="food-customization-summary">
-            <span>Current selection</span>
-            <b id="foodCustomizationSummary">As shown on menu</b>
+            <span>Your choice</span>
+            <b id="foodCustomizationSummary">Order as shown</b>
           </div>
         </div>
       ` : `
         <div class="food-customization-panel">
           <div class="food-customization-head">
-            <strong>Served as shown</strong>
-            <span>This item is currently ordered exactly as displayed on the menu.</span>
+            <strong>Order as shown</strong>
+            <span>This item is served exactly the way it appears on the menu right now.</span>
           </div>
         </div>
       `}      <button class="btn-primary full" onclick="addCurrentFoodCustomizationToCart(${item.id});">        ${inCart ? '+ Add Another Plate' : '+ Add to Cart'}      </button>      <button onclick="toggleWishlistItem(${item.id}); closeModal('foodModal');"
@@ -705,7 +705,7 @@ function updateCartUI() {
       <div class="cart-item-emoji">${item.emoji}</div>
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
-        <div class="cart-item-meta">${item.customization_summary || 'As shown on menu'}</div>
+        <div class="cart-item-meta">${item.customization_summary || 'Order as shown'}</div>
         <div class="cart-item-price">GH₵ ${(item.price * item.qty).toFixed(2)}</div>
       </div>
       <div class="cart-item-qty">
@@ -907,7 +907,7 @@ function renderCheckoutSummary() {
 
   summaryEl.innerHTML = cart.map(item => `
     <div class="checkout-summary-item">
-      <span>${item.emoji} ${item.name} × ${item.qty}<br/><small>${item.customization_summary || 'As shown on menu'}</small></span>
+      <span>${item.emoji} ${item.name} × ${item.qty}<br/><small>${item.customization_summary || 'Order as shown'}</small></span>
       <span>GH₵ ${(item.price * item.qty).toFixed(2)}</span>
     </div>`).join('');
 
@@ -1657,7 +1657,7 @@ function reorder(orderId) {
       ...buildCartItem(menuItem, []),
       qty: i.qty,
       price: Number(i.price || menuItem.price),
-      customization_summary: i.customization_summary || 'As shown on menu',
+      customization_summary: i.customization_summary || 'Order as shown',
       customization_signature: i.customization_signature || ''
     };
     const existing = cart.find(c => c.id === i.id && (c.customization_signature || '') === configuredItem.customization_signature);
