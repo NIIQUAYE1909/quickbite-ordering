@@ -2068,6 +2068,22 @@ footer {
   animation: fadeUp 0.3s ease;
 }
 
+#trackResult {
+  min-height: 260px;
+}
+
+#trackResult .track-card,
+#trackResult .tracking-history-row,
+#trackResult .track-no-driver,
+#trackResult .track-updated {
+  animation: none !important;
+  transition: none !important;
+}
+
+#trackResult .track-card {
+  will-change: auto;
+}
+
 .track-card-header {
   display: flex;
   justify-content: space-between;
