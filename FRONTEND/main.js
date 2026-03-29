@@ -401,7 +401,7 @@ function getFoodImageForItem(item) {
     { key: 'chocolate lava cake', url: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Chocolate_lava_cake.jpg' },
     { key: 'strawberry cheesecake', url: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=1000&q=80' },
     { key: 'fresh fruit smoothie', url: 'https://images.unsplash.com/photo-1502741224143-90386d7f8c82?auto=format&fit=crop&w=1000&q=80' },
-    { key: 'sobolo delight', url: 'https://images.unsplash.com/photo-1556881286-fc6915169721?auto=format&fit=crop&w=1000&q=80' }
+    { key: 'sobolo delight', url: 'https://upload.wikimedia.org/wikipedia/commons/a/a0/Zobo%28hibiscus%29_drink.jpg' }
   ];
 
   const exact = byName.find((x) => dishText.includes(x.key));
@@ -414,7 +414,7 @@ function getFoodImageForItem(item) {
   if (dishText.includes('kenkey') && dishText.includes('fish')) return 'https://upload.wikimedia.org/wikipedia/commons/8/81/Ga_Kenkey.jpg';
   if (dishText.includes('ampesi') && dishText.includes('kontomire')) return 'https://upload.wikimedia.org/wikipedia/commons/e/e1/Ampesi_and_kontomire_stew.jpg';
   if (dishText.includes('tuo zaafi') || dishText.includes('tz special')) return 'https://upload.wikimedia.org/wikipedia/commons/5/57/Tuo_zaafi.jpg';
-  if (dishText.includes('sobolo') || dishText.includes('hibiscus')) return 'https://images.unsplash.com/photo-1556881286-fc6915169721?auto=format&fit=crop&w=1000&q=80';
+  if (dishText.includes('sobolo') || dishText.includes('hibiscus')) return 'https://upload.wikimedia.org/wikipedia/commons/a/a0/Zobo%28hibiscus%29_drink.jpg';
 
   // Category-based food photos
   if (category === 'burger') return 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1000&q=80';
