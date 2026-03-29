@@ -583,8 +583,47 @@ function applyPromo(code) {
   }
   activePromo = code.toUpperCase();
   deliveryFee = promo.type === 'delivery' ? 0 : 5;
+  syncPromoUI(activePromo, promo);
   updateCartUI();
   showToast(`🎉 Promo applied: ${promo.desc}!`);
+}
+
+function syncPromoUI(code, promo) {
+  const promoInput = document.getElementById('promoInput');
+  const promoMsg = document.getElementById('promoMsg');
+  if (promoInput) promoInput.value = code;
+  if (promoMsg && promo) {
+    promoMsg.innerHTML = `<span style="color:var(--success);">✅ ${promo.desc} ready to use.</span>`;
+  }
+}
+
+function activateOffer(code, category = null) {
+  const promo = promoCodes[code.toUpperCase()];
+  if (!promo) {
+    showToast('❌ This offer is unavailable right now.');
+    return;
+  }
+
+  applyPromo(code);
+
+  if (category) {
+    const activeCategoryButton = document.querySelector(`.cat-pill[data-cat="${category}"]`);
+    filterCategory(category, activeCategoryButton || undefined);
+  }
+
+  if (cart.length > 0) {
+    const cartSidebar = document.getElementById('cartSidebar');
+    if (cartSidebar && !cartSidebar.classList.contains('open')) {
+      toggleCart();
+    }
+    return;
+  }
+
+  scrollToMenu();
+  const guidance = category
+    ? `Offer ready. Browse the ${category} dishes and add one to your cart to use it.`
+    : 'Offer ready. Add an item to your cart to use it at checkout.';
+  showToast(guidance);
 }
 
 function applyPromoFromCart() {
@@ -604,7 +643,7 @@ function applyPromoFromCart() {
 
   activePromo = code.toUpperCase();
   deliveryFee = promo.type === 'delivery' ? 0 : 5;
-  msg.innerHTML = `<span style="color:var(--success);">✅ ${promo.desc} applied!</span>`;
+  syncPromoUI(activePromo, promo);
   updateCartUI();
 }
 
