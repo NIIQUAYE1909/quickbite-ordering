@@ -2096,6 +2096,16 @@ function scrollToSection(id) {
   if (el) el.scrollIntoView({ behavior: 'smooth' });
 }
 
+function navigateFooterSection(id, label) {
+  scrollToSection(id);
+  showToast(`${label} section opened`);
+}
+
+function openFooterModal(id, label) {
+  showModal(id);
+  showToast(`${label} opened`);
+}
+
 function scrollToTop() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
