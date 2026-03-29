@@ -2057,6 +2057,12 @@ footer {
   transition: border-color 0.2s, transform 0.2s;
 }
 
+.footer-socials a svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
 .footer-socials a:hover { border-color: var(--accent); transform: translateY(-2px); }
 
 .footer-links {
