@@ -169,6 +169,25 @@ body.auth-locked {
   overflow: hidden;
 }
 
+body.admin-portal-mode .hero,
+body.admin-portal-mode .delivery-coverage-section,
+body.admin-portal-mode .offers-section,
+body.admin-portal-mode .categories-section,
+body.admin-portal-mode .menu-section,
+body.admin-portal-mode #orders,
+body.admin-portal-mode footer,
+body.admin-portal-mode .cart-sidebar,
+body.admin-portal-mode .cart-overlay,
+body.admin-portal-mode .wishlist-sidebar,
+body.admin-portal-mode #authGate {
+  display: none !important;
+}
+
+body.admin-portal-mode .navbar {
+  position: sticky;
+  top: 0;
+}
+
 body::before {
   content: '';
   position: fixed;
