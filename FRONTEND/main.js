@@ -286,7 +286,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Load saved state from localStorage
   loadState();
-  await loadFoods();
+  prepareMenuData(menuData);
+  renderMenu(menuData);
+  loadFoods();
   renderOrders();
   updateAuthUI();
   updateWishlistUI();
@@ -367,12 +369,18 @@ async function loadFoods() {
     renderMenu(menuData);
   } catch (error) {
     console.warn('Failed to load foods from backend:', error);
-    menuData.forEach((item) => {
-      if (!item.imageUrl) item.imageUrl = getFoodImageForItem(item);
-    });
+    prepareMenuData(menuData);
     renderMenu(menuData);
     showToast('Backend menu is unavailable. Showing backup menu.');
   }
+}
+
+function prepareMenuData(items) {
+  items.forEach((item) => {
+    if (!item.imageUrl) {
+      item.imageUrl = getFoodImageForItem(item);
+    }
+  });
 }
 
 function getFoodImageForItem(item) {
@@ -574,11 +582,13 @@ function renderMenu(items) {
 
   grid.innerHTML = items.map((item, index) => {
     const isWishlisted = wishlist.some(w => w.id === item.id);
+    const imageLoading = index < 4 ? 'eager' : 'lazy';
+    const imagePriority = index < 4 ? 'high' : 'low';
     return `
     <div class="menu-card" style="animation-delay:${index * 0.05}s;" onclick="showFoodDetails(${item.id})">
       <div class="menu-card-img">
         ${item.imageUrl
-          ? `<img src="${item.imageUrl}" alt="${item.name}" class="menu-card-photo" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"/><span class="menu-emoji-display" style="display:none;">${item.emoji}</span>`
+          ? `<img src="${item.imageUrl}" alt="${item.name}" class="menu-card-photo" loading="${imageLoading}" fetchpriority="${imagePriority}" decoding="async" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"/><span class="menu-emoji-display" style="display:none;">${item.emoji}</span>`
           : `<span>${item.emoji}</span>`}
         ${item.badge ? `<div class="menu-badge">${item.badge}</div>` : ''}
         <button class="card-wishlist-btn ${isWishlisted ? 'liked' : ''}"

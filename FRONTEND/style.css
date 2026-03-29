@@ -985,6 +985,8 @@ body::before {
   transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
   animation: fadeUp 0.5s ease both;
   position: relative;
+  content-visibility: auto;
+  contain-intrinsic-size: 340px;
 }
 
 .menu-card:hover {
@@ -1008,6 +1010,7 @@ body::before {
   height: 100%;
   object-fit: cover;
   display: block;
+  background: var(--surface);
 }
 
 .menu-emoji-display {
