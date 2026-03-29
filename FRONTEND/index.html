@@ -10,17 +10,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
 </head>
 <body>
-  <div class="role-entry-gate" id="roleEntryGate">
-    <div class="role-entry-card">
-      <div class="role-entry-badge">QuickBite Access</div>
-      <h1>Continue as Admin or User</h1>
-      <p>Choose how you want to enter the platform. Admin access requires valid credentials. User access takes you to the regular ordering experience.</p>
-      <div class="role-entry-actions">
-        <button class="btn-primary" type="button" onclick="beginAdminEntry()">Admin</button>
-        <button class="btn-outline auth-gate-outline" type="button" onclick="enterAsUser()">User</button>
-      </div>
-    </div>
-  </div>
   <div class="auth-gate" id="authGate">
     <div class="auth-gate-card">
       <div class="auth-gate-badge">Ready To Order?</div>
@@ -42,11 +31,9 @@
       <li><a href="#orders" onclick="scrollToSection('orders')">My Orders</a></li>
       <li><a href="#" onclick="showModal('trackModal')">Track Order</a></li>
       <li><a href="#" onclick="showModal('driverTrackModal')" title="For delivery drivers">🚗 Driver</a></li>
-      <li class="admin-nav-link" style="display:none;"><a href="#" onclick="showAdminLogin()">Admin</a></li>
     </ul>
     <div class="nav-right">
       <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">☀️</button>
-      <button class="admin-portal-btn" type="button" onclick="showAdminLogin()" title="Open Admin Portal">Admin</button>
       <button class="wishlist-btn" onclick="toggleWishlist()" title="Favourites">
         ♡ <span id="wishlistCount">0</span>
       </button>
@@ -71,10 +58,8 @@
       <a href="#orders" onclick="closeMobileMenu()">My Orders</a>
       <a href="#" onclick="showModal('trackModal'); closeMobileMenu()">Track Order</a>
       <a href="#" onclick="showModal('driverTrackModal'); closeMobileMenu()">🚗 Driver Mode</a>
-      <a href="#" class="admin-nav-link" style="display:none;" onclick="showAdminLogin(); closeMobileMenu()">Admin</a>
     </div>
     <div class="mobile-drawer-actions">
-      <button class="mobile-drawer-btn" type="button" onclick="showAdminLogin(); closeMobileMenu()">Admin Portal</button>
       <button class="mobile-drawer-btn" type="button" onclick="toggleTheme(); closeMobileMenu()">Toggle Theme</button>
       <button class="mobile-drawer-btn" type="button" onclick="toggleWishlist(); closeMobileMenu()">♡ Favourites</button>
       <button class="mobile-drawer-btn" type="button" onclick="toggleCart(); closeMobileMenu()">🛒 Open Cart</button>

@@ -193,6 +193,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   applyTheme();
   watchSystemTheme();
   syncAdminPortalUI();
+  initializeAdminPortalLock();
+  notifyPendingAdminPortalMessage();
 
   // Load saved state from localStorage
   loadState();
@@ -208,17 +210,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 60);
   });
 
-  // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeAllModals();
       if (document.getElementById('cartSidebar').classList.contains('open')) toggleCart();
       if (document.getElementById('wishlistSidebar').classList.contains('open')) toggleWishlist();
-    }
-
-    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') {
-      e.preventDefault();
-      showAdminLogin();
     }
   });
 
@@ -230,6 +226,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         submitSearch();
       }
     });
+  }
+});
+
+window.addEventListener('storage', (event) => {
+  if (event.key === ADMIN_PORTAL_LOCK_KEY && isAdminPortal() && isAdminPortalLockedByAnotherTab()) {
+    handleAdminPortalLockConflict();
+  }
+});
+
+window.addEventListener('beforeunload', () => {
+  if (isAdminPortal()) {
+    releaseAdminPortalLock();
+    stopAdminPortalHeartbeat();
   }
 });
 
@@ -1047,17 +1056,23 @@ function clearOrders() {
 // ========== ADMIN PANEL FUNCTIONS ==========
 // Simple admin credential protection
 let isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true' && !!localStorage.getItem('qb_admin_token');
+const ADMIN_PORTAL_LOCK_KEY = 'qb_admin_portal_lock';
+const ADMIN_PORTAL_TAB_ID_KEY = 'qb_admin_portal_tab_id';
+const ADMIN_PORTAL_NOTICE_KEY = 'qb_admin_portal_notice';
+const ADMIN_PORTAL_LOCK_TTL_MS = 15000;
+const ADMIN_PORTAL_HEARTBEAT_MS = 5000;
+const adminPortalTabId = (() => {
+  const existingTabId = sessionStorage.getItem(ADMIN_PORTAL_TAB_ID_KEY);
+  if (existingTabId) return existingTabId;
+  const nextTabId = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  sessionStorage.setItem(ADMIN_PORTAL_TAB_ID_KEY, nextTabId);
+  return nextTabId;
+})();
+let adminPortalHeartbeat = null;
 
 function getAdminHeaders() {
   const token = localStorage.getItem('qb_admin_token') || '';
   return token ? { 'X-Admin-Token': token } : {};
-}
-
-function syncRoleEntryGate() {
-  const gate = document.getElementById('roleEntryGate');
-  if (!gate) return;
-  const chosenRole = localStorage.getItem('qb_entry_role');
-  gate.style.display = (chosenRole || isAdminLoggedIn || isAdminPortal()) ? 'none' : 'flex';
 }
 
 function isAdminPortal() {
@@ -1079,27 +1094,108 @@ function syncAdminPortalUI() {
   document.body.classList.toggle('admin-portal-mode', isAdminPortal());
 }
 
+function readAdminPortalLock() {
+  try {
+    return JSON.parse(localStorage.getItem(ADMIN_PORTAL_LOCK_KEY) || 'null');
+  } catch (_) {
+    return null;
+  }
+}
+
+function hasFreshAdminPortalLock(lock = readAdminPortalLock()) {
+  return !!(lock && lock.tabId && (Date.now() - Number(lock.updatedAt || 0) < ADMIN_PORTAL_LOCK_TTL_MS));
+}
+
+function isAdminPortalLockedByAnotherTab() {
+  const lock = readAdminPortalLock();
+  return hasFreshAdminPortalLock(lock) && lock.tabId !== adminPortalTabId;
+}
+
+function writeAdminPortalLock() {
+  localStorage.setItem(ADMIN_PORTAL_LOCK_KEY, JSON.stringify({
+    tabId: adminPortalTabId,
+    updatedAt: Date.now()
+  }));
+}
+
+function releaseAdminPortalLock() {
+  const lock = readAdminPortalLock();
+  if (lock && lock.tabId === adminPortalTabId) {
+    localStorage.removeItem(ADMIN_PORTAL_LOCK_KEY);
+  }
+}
+
+function stopAdminPortalHeartbeat() {
+  if (adminPortalHeartbeat) {
+    clearInterval(adminPortalHeartbeat);
+    adminPortalHeartbeat = null;
+  }
+}
+
+function handleAdminPortalLockConflict() {
+  stopAdminPortalHeartbeat();
+  sessionStorage.setItem(ADMIN_PORTAL_NOTICE_KEY, 'Admin portal is already open in another tab.');
+  const url = new URL(window.location.href);
+  url.searchParams.delete('portal');
+  url.hash = 'home';
+  window.location.replace(url.toString());
+}
+
+function claimAdminPortalLock() {
+  if (!isAdminPortal()) return true;
+  if (isAdminPortalLockedByAnotherTab()) return false;
+  writeAdminPortalLock();
+  return true;
+}
+
+function startAdminPortalHeartbeat() {
+  if (!isAdminPortal()) return;
+  stopAdminPortalHeartbeat();
+  if (!claimAdminPortalLock()) {
+    handleAdminPortalLockConflict();
+    return;
+  }
+  adminPortalHeartbeat = window.setInterval(() => {
+    if (!claimAdminPortalLock()) {
+      handleAdminPortalLockConflict();
+      return;
+    }
+    writeAdminPortalLock();
+  }, ADMIN_PORTAL_HEARTBEAT_MS);
+}
+
+function initializeAdminPortalLock() {
+  if (!isAdminPortal()) {
+    releaseAdminPortalLock();
+    stopAdminPortalHeartbeat();
+    return;
+  }
+  if (!claimAdminPortalLock()) {
+    handleAdminPortalLockConflict();
+    return;
+  }
+  startAdminPortalHeartbeat();
+}
+
+function notifyPendingAdminPortalMessage() {
+  const notice = sessionStorage.getItem(ADMIN_PORTAL_NOTICE_KEY);
+  if (!notice) return;
+  sessionStorage.removeItem(ADMIN_PORTAL_NOTICE_KEY);
+  setTimeout(() => showToast(`⚠️ ${notice}`), 250);
+}
+
 function syncAdminAccess() {
   const adminSection = document.getElementById('admin');
-  const adminLinks = document.querySelectorAll('.admin-nav-link');
-  const adminPortalButtons = document.querySelectorAll('.admin-portal-btn');
-
-  adminLinks.forEach((link) => {
-    link.style.display = isAdminLoggedIn ? '' : 'none';
-  });
-
-  adminPortalButtons.forEach((button) => {
-    button.classList.toggle('active', isAdminLoggedIn);
-    button.textContent = isAdminLoggedIn ? 'Admin Open' : 'Admin';
-    button.title = isAdminLoggedIn ? 'Open Admin Panel' : 'Open Admin Portal';
-  });
-
   if (adminSection) {
-    adminSection.style.display = isAdminLoggedIn ? '' : 'none';
+    adminSection.style.display = (isAdminLoggedIn && isAdminPortal()) ? '' : 'none';
   }
 }
 
 function showAdminLogin() {
+  if (isAdminPortalLockedByAnotherTab()) {
+    showToast('⚠️ Admin portal is already open in another tab');
+    return;
+  }
   if (isAdminLoggedIn) {
     window.open(getAdminPortalUrl(), '_blank', 'noopener');
   } else {
@@ -1107,20 +1203,16 @@ function showAdminLogin() {
   }
 }
 
-function beginAdminEntry() {
-  showModal('adminLoginModal');
-}
-
-function enterAsUser() {
-  localStorage.setItem('qb_entry_role', 'user');
-  syncRoleEntryGate();
-  closeModal('adminLoginModal');
-}
-
 function verifyAdmin() {
   const username = document.getElementById('adminUsername').value.trim().toLowerCase();
   const password = document.getElementById('adminPassword').value;
   const errorEl = document.getElementById('adminLoginError');
+
+  if (isAdminPortalLockedByAnotherTab()) {
+    errorEl.textContent = 'Admin portal is already open in another tab.';
+    errorEl.style.display = 'block';
+    return;
+  }
 
   fetch(`${API_BASE}/admin/login`, {
     method: 'POST',
@@ -1136,15 +1228,12 @@ function verifyAdmin() {
       isAdminLoggedIn = true;
       localStorage.setItem('qb_admin_logged_in', 'true');
       localStorage.setItem('qb_admin_token', payload.token);
-      localStorage.setItem('qb_entry_role', 'admin');
       closeModal('adminLoginModal');
       errorEl.style.display = 'none';
+      errorEl.textContent = 'Invalid admin credentials.';
       document.getElementById('adminUsername').value = '';
       document.getElementById('adminPassword').value = '';
-      syncRoleEntryGate();
       syncAdminAccess();
-      loadAllOrdersAdmin();
-      loadAllComplaintsAdmin();
       showToast('✅ Admin logged in successfully');
       const adminTab = window.open(getAdminPortalUrl(), '_blank', 'noopener');
       if (!adminTab) window.location.href = getAdminPortalUrl();
@@ -1160,9 +1249,9 @@ function logoutAdmin() {
   isAdminLoggedIn = false;
   localStorage.removeItem('qb_admin_logged_in');
   localStorage.removeItem('qb_admin_token');
-  localStorage.removeItem('qb_entry_role');
+  releaseAdminPortalLock();
+  stopAdminPortalHeartbeat();
   syncAdminAccess();
-  syncRoleEntryGate();
   if (isAdminPortal()) {
     const url = new URL(window.location.href);
     url.searchParams.delete('portal');
@@ -1177,18 +1266,15 @@ function logoutAdmin() {
 // Check admin login on page load
 function checkAdminLogin() {
   isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true' && !!localStorage.getItem('qb_admin_token');
-  syncRoleEntryGate();
   syncAdminAccess();
   if (isAdminPortal() && !isAdminLoggedIn) {
     showModal('adminLoginModal');
     return;
   }
-  if (isAdminLoggedIn) {
+  if (isAdminLoggedIn && isAdminPortal()) {
     loadAllOrdersAdmin();
     loadAllComplaintsAdmin();
-    if (isAdminPortal()) {
-      setTimeout(() => scrollToSection('admin'), 100);
-    }
+    setTimeout(() => scrollToSection('admin'), 100);
   }
 }
 
