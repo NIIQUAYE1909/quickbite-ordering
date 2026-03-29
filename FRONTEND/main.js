@@ -1045,9 +1045,12 @@ function clearOrders() {
 
 // ========== ADMIN PANEL FUNCTIONS ==========
 // Simple admin credential protection
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'quickbite2025';
-let isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true';
+let isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true' && !!localStorage.getItem('qb_admin_token');
+
+function getAdminHeaders() {
+  const token = localStorage.getItem('qb_admin_token') || '';
+  return token ? { 'X-Admin-Token': token } : {};
+}
 
 function syncRoleEntryGate() {
   const gate = document.getElementById('roleEntryGate');
@@ -1100,31 +1103,44 @@ function verifyAdmin() {
   const username = document.getElementById('adminUsername').value.trim().toLowerCase();
   const password = document.getElementById('adminPassword').value;
   const errorEl = document.getElementById('adminLoginError');
-  
-  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-    isAdminLoggedIn = true;
-    localStorage.setItem('qb_admin_logged_in', 'true');
-    localStorage.setItem('qb_entry_role', 'admin');
-    closeModal('adminLoginModal');
-    errorEl.style.display = 'none';
-    document.getElementById('adminUsername').value = '';
-    document.getElementById('adminPassword').value = '';
-    syncRoleEntryGate();
-    syncAdminAccess();
-    loadAllOrdersAdmin();
-    loadAllComplaintsAdmin();
-    showToast('✅ Admin logged in successfully');
-    scrollToSection('admin');
-  } else {
-    errorEl.style.display = 'block';
-    document.getElementById('adminUsername').value = '';
-    document.getElementById('adminPassword').value = '';
-  }
+
+  fetch(`${API_BASE}/admin/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  })
+    .then(async (res) => {
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || !payload.token) {
+        throw new Error(payload.error || 'Invalid admin credentials.');
+      }
+
+      isAdminLoggedIn = true;
+      localStorage.setItem('qb_admin_logged_in', 'true');
+      localStorage.setItem('qb_admin_token', payload.token);
+      localStorage.setItem('qb_entry_role', 'admin');
+      closeModal('adminLoginModal');
+      errorEl.style.display = 'none';
+      document.getElementById('adminUsername').value = '';
+      document.getElementById('adminPassword').value = '';
+      syncRoleEntryGate();
+      syncAdminAccess();
+      loadAllOrdersAdmin();
+      loadAllComplaintsAdmin();
+      showToast('✅ Admin logged in successfully');
+      scrollToSection('admin');
+    })
+    .catch(() => {
+      errorEl.style.display = 'block';
+      document.getElementById('adminUsername').value = '';
+      document.getElementById('adminPassword').value = '';
+    });
 }
 
 function logoutAdmin() {
   isAdminLoggedIn = false;
   localStorage.removeItem('qb_admin_logged_in');
+  localStorage.removeItem('qb_admin_token');
   localStorage.removeItem('qb_entry_role');
   syncAdminAccess();
   syncRoleEntryGate();
@@ -1133,7 +1149,7 @@ function logoutAdmin() {
 
 // Check admin login on page load
 function checkAdminLogin() {
-  isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true';
+  isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true' && !!localStorage.getItem('qb_admin_token');
   syncRoleEntryGate();
   syncAdminAccess();
   if (isAdminLoggedIn) {
@@ -1160,10 +1176,11 @@ async function loadAllOrdersAdmin() {
   if (usersList) usersList.innerHTML = '<div class="empty-orders">Loading registered users...</div>';
   
   try {
+    const adminHeaders = getAdminHeaders();
     const [response, usersResponse, usersListResponse] = await Promise.all([
-      fetch(`${API_BASE}/orders`),
-      fetch(`${API_BASE}/users/stats`).catch(() => null),
-      fetch(`${API_BASE}/users`).catch(() => null)
+      fetch(`${API_BASE}/orders`, { headers: adminHeaders }),
+      fetch(`${API_BASE}/users/stats`, { headers: adminHeaders }).catch(() => null),
+      fetch(`${API_BASE}/users`, { headers: adminHeaders }).catch(() => null)
     ]);
     const dbOrders = await response.json();
     const userStats = usersResponse && usersResponse.ok
@@ -1261,9 +1278,10 @@ async function assignDriver(orderId) {
   }
   
   try {
+    const adminHeaders = { 'Content-Type': 'application/json', ...getAdminHeaders() };
     const response = await fetch(`${API_BASE}/orders/${orderId}/driver`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: adminHeaders,
       body: JSON.stringify({ driver_name: driverName, driver_phone: driverPhone })
     });
     
@@ -1282,9 +1300,10 @@ async function assignDriver(orderId) {
 
 async function updateOrderStatus(orderId, newStatus) {
   try {
+    const adminHeaders = { 'Content-Type': 'application/json', ...getAdminHeaders() };
     const response = await fetch(`${API_BASE}/orders/${orderId}/status`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: adminHeaders,
       body: JSON.stringify({ status: newStatus })
     });
     
@@ -2060,7 +2079,7 @@ async function loadAllComplaintsAdmin() {
   list.innerHTML = '<div class="empty-orders">Loading customer concerns...</div>';
 
   try {
-    const response = await fetch(`${API_BASE}/complaints`);
+    const response = await fetch(`${API_BASE}/complaints`, { headers: getAdminHeaders() });
     const complaints = await response.json();
     const localDrafts = pendingComplaints.map((complaint) => ({ ...complaint, local_only: true }));
     const mergedComplaints = Array.isArray(complaints) ? [...localDrafts, ...complaints] : localDrafts;

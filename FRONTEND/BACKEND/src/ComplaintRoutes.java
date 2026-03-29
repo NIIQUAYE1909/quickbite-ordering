@@ -30,11 +30,19 @@ public class ComplaintRoutes implements HttpHandler {
         }
 
         if (method.equalsIgnoreCase("GET") && path.endsWith("/complaints")) {
+            if (!Server.isAuthorizedAdmin(exchange)) {
+                Server.sendResponse(exchange, 403, "{\"error\":\"Admin access required.\"}");
+                return;
+            }
             getAllComplaints(exchange);
             return;
         }
 
         if (method.equalsIgnoreCase("PUT") && path.matches(".*/api/complaints/\\d+/status.*")) {
+            if (!Server.isAuthorizedAdmin(exchange)) {
+                Server.sendResponse(exchange, 403, "{\"error\":\"Admin access required.\"}");
+                return;
+            }
             int complaintId = extractComplaintId(path);
             updateComplaintStatus(exchange, complaintId);
             return;

@@ -17,6 +17,9 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
 public class Server {
+    private static final String DEFAULT_ADMIN_USERNAME = "admin";
+    private static final String DEFAULT_ADMIN_PASSWORD = "quickbite2025";
+    private static final String DEFAULT_ADMIN_TOKEN = "quickbite-admin-token";
 
     // The port our server listens on
     // Frontend will send requests to: http://localhost:8080/api/...
@@ -40,6 +43,7 @@ public class Server {
             server.createContext("/api/foods",    new FoodRoutes());
             server.createContext("/api/orders",   new OrderRoutes());
             server.createContext("/api/users",    new UserRoutes());
+            server.createContext("/api/admin",    new AdminRoutes());
             server.createContext("/api/complaints", new ComplaintRoutes());
             server.createContext("/api/reviews",  new ReviewRoutes());
             server.createContext("/api/tracking", new TrackingRoutes());
@@ -87,6 +91,26 @@ public class Server {
         exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
         exchange.getResponseHeaders().add("Content-Type", "application/json");
+    }
+
+    public static String getAdminUsername() {
+        String env = System.getenv("ADMIN_USERNAME");
+        return env != null && !env.trim().isEmpty() ? env.trim().toLowerCase() : DEFAULT_ADMIN_USERNAME;
+    }
+
+    public static String getAdminPassword() {
+        String env = System.getenv("ADMIN_PASSWORD");
+        return env != null && !env.trim().isEmpty() ? env.trim() : DEFAULT_ADMIN_PASSWORD;
+    }
+
+    public static String getAdminToken() {
+        String env = System.getenv("ADMIN_TOKEN");
+        return env != null && !env.trim().isEmpty() ? env.trim() : DEFAULT_ADMIN_TOKEN;
+    }
+
+    public static boolean isAuthorizedAdmin(HttpExchange exchange) {
+        String token = exchange.getRequestHeaders().getFirst("X-Admin-Token");
+        return token != null && token.equals(getAdminToken());
     }
 
     // ---- SEND RESPONSE HELPER ----

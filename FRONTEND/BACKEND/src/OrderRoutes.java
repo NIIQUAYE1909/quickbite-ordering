@@ -61,18 +61,30 @@ public class OrderRoutes implements HttpHandler {
         }
 
         if (method.equalsIgnoreCase("PUT") && path.matches(".*/api/orders/\\d+/driver.*")) {
+            if (!Server.isAuthorizedAdmin(exchange)) {
+                Server.sendResponse(exchange, 403, "{\"error\":\"Admin access required.\"}");
+                return;
+            }
             int orderId = extractOrderId(path);
             assignDriver(exchange, orderId);
             return;
         }
 
         if (method.equalsIgnoreCase("PUT") && path.matches(".*/api/orders/\\d+/status.*")) {
+            if (!Server.isAuthorizedAdmin(exchange)) {
+                Server.sendResponse(exchange, 403, "{\"error\":\"Admin access required.\"}");
+                return;
+            }
             int orderId = extractOrderId(path);
             updateOrderStatus(exchange, orderId);
             return;
         }
 
         if (method.equalsIgnoreCase("GET")) {
+            if (!Server.isAuthorizedAdmin(exchange)) {
+                Server.sendResponse(exchange, 403, "{\"error\":\"Admin access required.\"}");
+                return;
+            }
             getAllOrders(exchange);
         } else if (method.equalsIgnoreCase("POST")) {
             placeOrder(exchange);

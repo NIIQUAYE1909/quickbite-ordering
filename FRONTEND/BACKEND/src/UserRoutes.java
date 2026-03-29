@@ -28,8 +28,16 @@ public class UserRoutes implements HttpHandler {
 
         if (method.equalsIgnoreCase("GET")) {
             if (path.endsWith("/stats")) {
+                if (!Server.isAuthorizedAdmin(exchange)) {
+                    Server.sendResponse(exchange, 403, "{\"error\":\"Admin access required.\"}");
+                    return;
+                }
                 getUserStats(exchange);
             } else if (path.equals("/api/users") || path.endsWith("/list")) {
+                if (!Server.isAuthorizedAdmin(exchange)) {
+                    Server.sendResponse(exchange, 403, "{\"error\":\"Admin access required.\"}");
+                    return;
+                }
                 getUsers(exchange);
             } else {
                 Server.sendResponse(exchange, 404, "{\"error\":\"Not found\"}");
