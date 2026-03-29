@@ -300,7 +300,7 @@ function getFoodImageForItem(item) {
     { key: 'classic margherita', url: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=1000&q=80' },
     { key: 'pepperoni pizza', url: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=1000&q=80' },
     { key: 'bbq chicken pizza', url: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=1000&q=80' },
-    { key: 'waakye special', url: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=1000&q=80' },
+    { key: 'waakye special', url: 'https://sl.bing.net/kglxd5xny7U' },
     { key: 'jollof rice special', url: 'https://images.unsplash.com/photo-1534939561126-855b8675edd7?auto=format&fit=crop&w=1000&q=80' },
     { key: 'grilled chicken combo', url: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=1000&q=80' },
     { key: 'spicy wings', url: 'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=1000&q=80' },
@@ -316,7 +316,7 @@ function getFoodImageForItem(item) {
   if (exact) return exact.url;
 
   // Local dishes and drinks often come from the backend with shorter names.
-  if (dishText.includes('waakye')) return 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=1000&q=80';
+  if (dishText.includes('waakye')) return 'https://sl.bing.net/kglxd5xny7U';
   if (dishText.includes('jollof')) return 'https://images.unsplash.com/photo-1534939561126-855b8675edd7?auto=format&fit=crop&w=1000&q=80';
   if (dishText.includes('sobolo') || dishText.includes('hibiscus')) return 'https://images.unsplash.com/photo-1556881286-fc6915169721?auto=format&fit=crop&w=1000&q=80';
 
