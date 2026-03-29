@@ -289,7 +289,9 @@ async function loadFoods() {
 
 function getFoodImageForItem(item) {
   const name = (item?.name || '').toLowerCase();
+  const description = (item?.description || '').toLowerCase();
   const category = (item?.category || '').toLowerCase();
+  const dishText = `${name} ${description}`;
 
   // Real food photos (stable links), matched by item name first
   const byName = [
@@ -310,8 +312,13 @@ function getFoodImageForItem(item) {
     { key: 'sobolo delight', url: 'https://images.unsplash.com/photo-1556881286-fc6915169721?auto=format&fit=crop&w=1000&q=80' }
   ];
 
-  const exact = byName.find((x) => name.includes(x.key));
+  const exact = byName.find((x) => dishText.includes(x.key));
   if (exact) return exact.url;
+
+  // Local dishes and drinks often come from the backend with shorter names.
+  if (dishText.includes('waakye')) return 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=1000&q=80';
+  if (dishText.includes('jollof')) return 'https://images.unsplash.com/photo-1534939561126-855b8675edd7?auto=format&fit=crop&w=1000&q=80';
+  if (dishText.includes('sobolo') || dishText.includes('hibiscus')) return 'https://images.unsplash.com/photo-1556881286-fc6915169721?auto=format&fit=crop&w=1000&q=80';
 
   // Category-based food photos
   if (category === 'burger') return 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1000&q=80';
