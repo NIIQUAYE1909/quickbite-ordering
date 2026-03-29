@@ -289,6 +289,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   prepareMenuData(menuData);
   renderMenu(menuData);
   loadFoods();
+  updatePromoCardState();
   renderOrders();
   updateAuthUI();
   updateWishlistUI();
@@ -562,6 +563,7 @@ function addConfiguredItemToCart(item, removedIds = []) {
   }
 
   updateCartUI();
+  updatePromoCardState();
   saveState();
   showToast(`${item.emoji} ${item.name} added to cart!`);
   if (!currentUser) {
@@ -788,6 +790,7 @@ function clearCart() {
   cart = [];
   activePromo = null;
   updateCartUI();
+  updatePromoCardState();
   saveState();
   showToast('🗑️ Cart cleared');
 }
@@ -897,6 +900,37 @@ function syncPromoUI(code, promo) {
   }
 }
 
+function updatePromoCardState() {
+  const promoCards = document.querySelectorAll('.offer-card[data-promo-code]');
+  promoCards.forEach((card) => {
+    const code = card.dataset.promoCode;
+    const button = card.querySelector('button');
+    const badge = card.querySelector('.offer-state-badge');
+    const status = card.querySelector('.offer-status-copy');
+    const promo = promoCodes[code];
+    const isActive = activePromo === code;
+
+    card.classList.toggle('offer-selected', isActive);
+    if (!button || !badge || !status || !promo) return;
+
+    if (isActive) {
+      badge.textContent = 'Applied';
+      status.textContent = cart.length > 0
+        ? `${promo.desc} is active on this order. You can keep shopping or checkout now.`
+        : `${promo.desc} is active. Add an item to use it on this order.`;
+      button.textContent = cart.length > 0 ? 'Applied to Cart ✓' : 'Deal Applied ✓';
+    } else {
+      badge.textContent = 'Ready';
+      if (code === 'WELCOME50') status.textContent = 'Tap to save this deal to your order.';
+      if (code === 'FREEDEL') status.textContent = 'Tap to apply free delivery instantly.';
+      if (code === 'LOCAL20') status.textContent = 'Tap to filter local dishes and save.';
+      if (code === 'WELCOME50') button.textContent = 'Claim Now →';
+      if (code === 'FREEDEL') button.textContent = 'Get Deal →';
+      if (code === 'LOCAL20') button.textContent = 'Order Now →';
+    }
+  });
+}
+
 function activateOffer(code, category = null) {
   const promo = promoCodes[code.toUpperCase()];
   if (!promo) {
@@ -914,6 +948,7 @@ function activateOffer(code, category = null) {
   }
 
   applyPromo(code);
+  updatePromoCardState();
 
   const cartSidebar = document.getElementById('cartSidebar');
   if (cartSidebar && !cartSidebar.classList.contains('open')) {
@@ -963,6 +998,7 @@ function applyPromoFromCart() {
   deliveryFee = promo.type === 'delivery' ? 0 : 5;
   syncPromoUI(activePromo, promo);
   updateCartUI();
+  updatePromoCardState();
 }
 
 // ---------- WISHLIST ----------
@@ -2720,3 +2756,4 @@ function closeMobileMenu() {
   if (backdrop) backdrop.classList.remove('open');
   document.body.classList.remove('nav-surface-open');
 }
+
