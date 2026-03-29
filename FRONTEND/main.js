@@ -305,7 +305,7 @@ function getFoodImageForItem(item) {
     { key: 'grilled chicken combo', url: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=1000&q=80' },
     { key: 'spicy wings', url: 'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=1000&q=80' },
     { key: 'chicken shawarma', url: 'https://images.unsplash.com/photo-1529006557810-274b9b2fc783?auto=format&fit=crop&w=1000&q=80' },
-    { key: 'banku & tilapia', url: 'https://upload.wikimedia.org/wikipedia/commons/7/7f/Banku_with_Tilapia.jpg' },
+    { key: 'banku & tilapia', url: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Banku_with_chicken_and_tilapia.jpg' },
     { key: 'chocolate lava cake', url: 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=1000&q=80' },
     { key: 'strawberry cheesecake', url: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=1000&q=80' },
     { key: 'fresh fruit smoothie', url: 'https://images.unsplash.com/photo-1502741224143-90386d7f8c82?auto=format&fit=crop&w=1000&q=80' },
