@@ -1198,7 +1198,6 @@ body.light-mode .mobile-quickbar {
   overflow: hidden;
   cursor: pointer;
   transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
-  animation: fadeUp 0.5s ease both;
   position: relative;
 }
 
@@ -1535,7 +1534,6 @@ body.light-mode .mobile-quickbar {
   border-radius: 12px;
   padding: 0.8rem 1rem;
   margin-bottom: 0.7rem;
-  animation: fadeUp 0.3s ease both;
 }
 
 .cart-item-emoji { font-size: 1.9rem; }
@@ -1672,7 +1670,6 @@ body.light-mode .mobile-quickbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  animation: fadeUp 0.4s ease both;
   transition: border-color 0.2s;
 }
 
