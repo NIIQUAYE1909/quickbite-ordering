@@ -728,7 +728,6 @@ body.light-mode .mobile-quickbar {
   padding: 0.4rem 1rem;
   border-radius: 50px;
   margin-bottom: 1.5rem;
-  animation: fadeUp 0.6s ease both;
 }
 
 .hero h1 {
@@ -738,7 +737,6 @@ body.light-mode .mobile-quickbar {
   line-height: 1.08;
   letter-spacing: -2px;
   margin-bottom: 1.2rem;
-  animation: fadeUp 0.6s 0.1s ease both;
 }
 
 .hero h1 em { font-style: italic; color: var(--accent); display: block; }
@@ -748,7 +746,6 @@ body.light-mode .mobile-quickbar {
   font-size: 1rem;
   max-width: 420px;
   margin-bottom: 2rem;
-  animation: fadeUp 0.6s 0.2s ease both;
 }
 
 .hero-actions {
@@ -756,7 +753,6 @@ body.light-mode .mobile-quickbar {
   gap: 0.85rem;
   flex-wrap: wrap;
   margin-bottom: 1rem;
-  animation: fadeUp 0.6s 0.22s ease both;
 }
 
 .hero-outline-btn {
@@ -785,7 +781,6 @@ body.light-mode .mobile-quickbar {
   align-items: center;
   max-width: 500px;
   margin-bottom: 2.5rem;
-  animation: fadeUp 0.6s 0.25s ease both;
   border-radius: 50px;
   overflow: hidden;
   border: 1px solid var(--border2);
@@ -830,7 +825,6 @@ body.light-mode .mobile-quickbar {
 .hero-stats {
   display: flex;
   gap: 2.5rem;
-  animation: fadeUp 0.6s 0.35s ease both;
 }
 
 .stat strong {
@@ -853,7 +847,6 @@ body.light-mode .mobile-quickbar {
   flex-direction: column;
   gap: 1rem;
   align-items: flex-end;
-  animation: fadeUp 0.8s 0.2s ease both;
 }
 
 .float-card {
@@ -867,7 +860,6 @@ body.light-mode .mobile-quickbar {
   font-size: 2.2rem;
   width: 255px;
   cursor: pointer;
-  animation: float 3s ease-in-out infinite;
   transition: border-color 0.3s, transform 0.3s;
 }
 
@@ -882,16 +874,10 @@ body.light-mode .mobile-quickbar {
   background: rgba(255,255,255,0.08);
 }
 
-.float-card.mid { animation-delay: -1s; width: 285px; }
-.float-card:last-child { animation-delay: -2s; }
+.float-card.mid { width: 285px; }
 .float-card:hover { border-color: var(--accent); transform: translateX(-8px) !important; }
 .float-card p { font-size: 0.82rem; color: var(--muted); margin: 0; }
 .float-card b { font-size: 0.92rem; color: var(--accent); }
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
 
 /* ---------- OFFERS SECTION ---------- */
 .offers-section {
