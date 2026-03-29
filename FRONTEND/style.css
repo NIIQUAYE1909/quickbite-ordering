@@ -115,6 +115,31 @@ body.light-mode .track-card {
   transform: rotate(20deg) scale(1.1);
 }
 
+.admin-portal-btn {
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.55rem 0.95rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, transform 0.2s, background 0.2s;
+}
+
+.admin-portal-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.admin-portal-btn.active {
+  background: rgba(34,197,94,0.1);
+  border-color: rgba(34,197,94,0.35);
+  color: #22c55e;
+}
+
 .theme-toggle-btn:disabled,
 .btn-primary:disabled,
 .mobile-drawer-btn:disabled {

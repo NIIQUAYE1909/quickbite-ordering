@@ -1051,9 +1051,16 @@ let isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true';
 function syncAdminAccess() {
   const adminSection = document.getElementById('admin');
   const adminLinks = document.querySelectorAll('.admin-nav-link');
+  const adminPortalButtons = document.querySelectorAll('.admin-portal-btn');
 
   adminLinks.forEach((link) => {
     link.style.display = isAdminLoggedIn ? '' : 'none';
+  });
+
+  adminPortalButtons.forEach((button) => {
+    button.classList.toggle('active', isAdminLoggedIn);
+    button.textContent = isAdminLoggedIn ? 'Admin Open' : 'Admin';
+    button.title = isAdminLoggedIn ? 'Open Admin Panel' : 'Open Admin Portal';
   });
 
   if (adminSection) {
