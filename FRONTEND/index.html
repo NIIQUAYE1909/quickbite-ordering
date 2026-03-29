@@ -61,6 +61,7 @@
       <a href="#" class="admin-nav-link" style="display:none;" onclick="showAdminLogin(); closeMobileMenu()">Admin</a>
     </div>
     <div class="mobile-drawer-actions">
+      <button class="mobile-drawer-btn" type="button" onclick="toggleTheme(); closeMobileMenu()">Toggle Theme</button>
       <button class="mobile-drawer-btn" type="button" onclick="toggleWishlist(); closeMobileMenu()">♡ Favourites</button>
       <button class="mobile-drawer-btn" type="button" onclick="toggleCart(); closeMobileMenu()">🛒 Open Cart</button>
       <button class="mobile-drawer-btn mobile-drawer-primary" type="button" onclick="showModal('loginModal'); closeMobileMenu()">Sign In</button>
@@ -359,7 +360,7 @@
         </div>
       </div>
 
-      <button class="btn-primary full" onclick="placeOrder()" style="margin-top:1.5rem;">
+      <button class="btn-primary full" id="placeOrderBtn" onclick="placeOrder()" style="margin-top:1.5rem;">
         Confirm & Place Order 🚀
       </button>
     </div>

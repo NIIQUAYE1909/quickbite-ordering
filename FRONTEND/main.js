@@ -118,6 +118,7 @@ let reviewItemId = null;
 let deliveryFee = 5;
 let trackedOrdersHistory = [];
 let pendingComplaints = [];
+let isSubmittingOrder = false;
 
 const PASSWORD_RULES = {
   minLength: 8,
@@ -131,34 +132,66 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // ---------- THEME TOGGLE ----------
 function toggleTheme() {
-  const body = document.body;
-  const btn  = document.getElementById('themeToggleBtn');
-  const isLight = body.classList.toggle('light-mode');
+  const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  const currentMode = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+  const nextMode = currentMode === 'light' ? 'dark' : 'light';
+  const preferredMode = prefersLight ? 'light' : 'dark';
 
-  // Update button icon
-  if (btn) btn.textContent = isLight ? '🌙' : '☀️';
+  applyThemeMode(nextMode);
 
-  // Persist preference
-  try { localStorage.setItem('qb_theme', isLight ? 'light' : 'dark'); } catch(e) {}
+  try {
+    localStorage.setItem('qb_theme', nextMode);
+    if (nextMode === preferredMode) {
+      localStorage.removeItem('qb_theme');
+    }
+  } catch (e) {}
 
-  showToast(isLight ? '☀️ Light mode on' : '🌙 Dark mode on');
+  showToast(nextMode === 'light' ? '☀️ Light mode on' : '🌙 Dark mode on');
 }
 
 function applyTheme() {
   try {
     const saved = localStorage.getItem('qb_theme');
-    if (saved === 'light') {
-      document.body.classList.add('light-mode');
-      const btn = document.getElementById('themeToggleBtn');
-      if (btn) btn.textContent = '🌙';
+    if (saved === 'light' || saved === 'dark') {
+      applyThemeMode(saved);
+      return;
     }
   } catch(e) {}
+
+  const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  applyThemeMode(prefersLight ? 'light' : 'dark');
+}
+
+function applyThemeMode(mode) {
+  const btn = document.getElementById('themeToggleBtn');
+  const isLight = mode === 'light';
+  document.body.classList.toggle('light-mode', isLight);
+  if (btn) btn.textContent = isLight ? '🌙' : '☀️';
+}
+
+function watchSystemTheme() {
+  if (!window.matchMedia) return;
+  const media = window.matchMedia('(prefers-color-scheme: light)');
+  const applySystemTheme = () => {
+    let saved = null;
+    try { saved = localStorage.getItem('qb_theme'); } catch (e) {}
+    if (!saved) {
+      applyThemeMode(media.matches ? 'light' : 'dark');
+    }
+  };
+
+  if (typeof media.addEventListener === 'function') {
+    media.addEventListener('change', applySystemTheme);
+  } else if (typeof media.addListener === 'function') {
+    media.addListener(applySystemTheme);
+  }
 }
 
 // ---------- INIT ----------
 document.addEventListener('DOMContentLoaded', async () => {
   // Apply saved theme first (before anything renders)
   applyTheme();
+  watchSystemTheme();
 
   // Load saved state from localStorage
   loadState();
@@ -783,6 +816,8 @@ const API_BASE = (() => {
 })();
 
 async function placeOrder() {
+  if (isSubmittingOrder) return;
+
   // Validate fields
   const name    = document.getElementById('checkoutName').value.trim();
   const email   = document.getElementById('checkoutEmail')?.value.trim().toLowerCase() || '';
@@ -811,6 +846,13 @@ async function placeOrder() {
   if (method === 'card') {
     const card = document.getElementById('cardNumber').value.replace(/\s/g, '');
     if (card.length < 16) { showToast('⚠️ Invalid card number'); return; }
+  }
+
+  const placeOrderBtn = document.getElementById('placeOrderBtn');
+  isSubmittingOrder = true;
+  if (placeOrderBtn) {
+    placeOrderBtn.disabled = true;
+    placeOrderBtn.textContent = 'Placing Order...';
   }
 
   const subtotal   = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
@@ -861,6 +903,7 @@ async function placeOrder() {
     const result = await res.json().catch(() => ({}));
     if (!res.ok) {
       showToast(result.error || 'Unable to place your order right now.');
+      resetPlaceOrderState();
       return;
     }
     orderData.id = Number(result.orderId || Date.now());
@@ -870,6 +913,7 @@ async function placeOrder() {
     orderData.driver_phone = result.driver_phone || '';
     if (Array.isArray(result.items) && result.items.length) orderData.items = result.items;
   } catch (_) {
+    resetPlaceOrderState();
     orderData.status = 'Pending Sync';
     orderData.sync_status = 'offline';
     orderData.orderedAt = new Date().toISOString();
@@ -900,6 +944,16 @@ async function placeOrder() {
   renderOrders();
   scrollToSection('orders');
   showOrderSuccess(orderData);
+  resetPlaceOrderState();
+}
+
+function resetPlaceOrderState() {
+  isSubmittingOrder = false;
+  const placeOrderBtn = document.getElementById('placeOrderBtn');
+  if (placeOrderBtn) {
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.textContent = 'Confirm & Place Order 🚀';
+  }
 }
 
 function showOrderSuccess(order) {
@@ -2008,6 +2062,7 @@ function showModal(id) {
 
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
+  if (id === 'checkoutModal') resetPlaceOrderState();
 }
 
 function closeModalOutside(event, id) {
@@ -2016,6 +2071,7 @@ function closeModalOutside(event, id) {
 
 function closeAllModals() {
   document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+  resetPlaceOrderState();
 }
 
 // ---------- TOAST ----------
@@ -2050,9 +2106,16 @@ function scrollToMenu() {
 }
 
 function toggleMobileMenu() {
-  document.getElementById('mobileDrawer').classList.toggle('open');
+  const drawer = document.getElementById('mobileDrawer');
+  const hamburger = document.getElementById('hamburger');
+  if (!drawer) return;
+  drawer.classList.toggle('open');
+  if (hamburger) hamburger.classList.toggle('active', drawer.classList.contains('open'));
 }
 
 function closeMobileMenu() {
-  document.getElementById('mobileDrawer').classList.remove('open');
+  const drawer = document.getElementById('mobileDrawer');
+  const hamburger = document.getElementById('hamburger');
+  if (drawer) drawer.classList.remove('open');
+  if (hamburger) hamburger.classList.remove('active');
 }
