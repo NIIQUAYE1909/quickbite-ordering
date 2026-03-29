@@ -1061,6 +1061,10 @@ body.light-mode .mobile-quickbar {
 }
 
 .cat-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 50px;
@@ -1075,11 +1079,55 @@ body.light-mode .mobile-quickbar {
 
 .cat-pill:hover { border-color: var(--accent); color: var(--text); }
 
+.cat-pill span:last-child {
+  line-height: 1;
+}
+
+.cat-pill-mark {
+  width: 0.78rem;
+  height: 0.78rem;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+}
+
+.cat-pill-mark-all {
+  background: linear-gradient(135deg, #ff8a3d, #ff5c1a);
+}
+
+.cat-pill-mark-burger {
+  background: linear-gradient(135deg, #d3a45d, #9f5c1d);
+}
+
+.cat-pill-mark-pizza {
+  background: linear-gradient(135deg, #ffcb64, #cf5033);
+}
+
+.cat-pill-mark-local {
+  background: linear-gradient(135deg, #d96d7f, #8f3e59);
+}
+
+.cat-pill-mark-chicken {
+  background: linear-gradient(135deg, #f0a96f, #8e5134);
+}
+
+.cat-pill-mark-drinks {
+  background: linear-gradient(135deg, #f5d4eb, #b55f8b);
+}
+
+.cat-pill-mark-dessert {
+  background: linear-gradient(135deg, #ffe2a5, #d69058);
+}
+
 .cat-pill.active {
   border-color: var(--accent);
   background: rgba(255,92,26,0.12);
   color: var(--accent);
   font-weight: 600;
+}
+
+.cat-pill.active .cat-pill-mark {
+  box-shadow: 0 0 0 4px rgba(255,92,26,0.14);
 }
 
 /* ---------- MENU SECTION ---------- */
