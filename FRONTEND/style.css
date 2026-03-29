@@ -2025,6 +2025,8 @@ footer {
   .track-card,
   .driver-location-card { padding: 0.9rem; }
   .audience-card-grid { grid-template-columns: 1fr; }
+  .tracking-metric-grid { grid-template-columns: 1fr; }
+  .active-tracking-shortcut { flex-direction: column; align-items: stretch; }
   .leaflet-map { height: 260px; }
   .footer-content { grid-template-columns: 1fr; }
   .footer-socials { flex-wrap: wrap; }
@@ -2330,6 +2332,36 @@ footer {
   margin-bottom: 0.85rem;
 }
 
+.tracking-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.tracking-metric-card {
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+  padding: 0.9rem;
+}
+
+.tracking-metric-label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.45rem;
+}
+
+.tracking-metric-value {
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+
 .presence-pill {
   padding: 0.35rem 0.7rem;
   border-radius: 999px;
@@ -2369,6 +2401,45 @@ footer {
   font-size: 1rem;
   box-shadow: 0 10px 22px rgba(0,0,0,0.22);
   border: 2px solid rgba(255,255,255,0.7);
+}
+
+.active-tracking-shortcut {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin: -0.15rem 0 1.1rem;
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255,92,26,0.18);
+  background:
+    radial-gradient(circle at top left, rgba(255,92,26,0.16), transparent 46%),
+    linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+}
+
+.active-tracking-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+
+.active-tracking-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.active-tracking-meta {
+  margin-top: 0.2rem;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.active-tracking-btn {
+  white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(255,92,26,0.18);
 }
 
 .map-frame {

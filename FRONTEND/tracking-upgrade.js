@@ -15,6 +15,139 @@
     return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
   }
 
+  function toLatLngPair(lat, lng) {
+    return [Number(lat), Number(lng)];
+  }
+
+  function haversineKm(start, end) {
+    if (!start || !end) return null;
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const earthRadiusKm = 6371;
+    const dLat = toRad(end[0] - start[0]);
+    const dLng = toRad(end[1] - start[1]);
+    const lat1 = toRad(start[0]);
+    const lat2 = toRad(end[0]);
+    const a = Math.sin(dLat / 2) ** 2
+      + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+    return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function formatDistance(distanceKm) {
+    if (!Number.isFinite(distanceKm)) return 'Waiting for both locations';
+    if (distanceKm < 1) return `${Math.max(50, Math.round(distanceKm * 1000 / 10) * 10)} m away`;
+    return `${distanceKm.toFixed(distanceKm >= 10 ? 0 : 1)} km away`;
+  }
+
+  function estimateEtaMinutes(distanceKm, speedKmh, status) {
+    if (!Number.isFinite(distanceKm)) return null;
+    if (status === 'Delivered') return 0;
+    const safeSpeed = Number(speedKmh) > 6 ? Number(speedKmh) : 18;
+    const trafficFactor = status === 'Preparing' ? 1.5 : 1.22;
+    return Math.max(1, Math.round((distanceKm / safeSpeed) * 60 * trafficFactor));
+  }
+
+  function formatEta(minutes, status) {
+    if (status === 'Delivered') return 'Delivered';
+    if (!Number.isFinite(minutes)) return 'ETA soon';
+    if (minutes <= 1) return 'About 1 min';
+    if (minutes < 60) return `${minutes} min away`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins ? `${hours}h ${mins}m away` : `${hours}h away`;
+  }
+
+  function getTrackingMetrics(data) {
+    const driverCoords = isFiniteNumber(data.latitude) && isFiniteNumber(data.longitude)
+      ? toLatLngPair(data.latitude, data.longitude)
+      : null;
+    const customerCoords = isFiniteNumber(data.customer_latitude) && isFiniteNumber(data.customer_longitude)
+      ? toLatLngPair(data.customer_latitude, data.customer_longitude)
+      : null;
+    const distanceKm = haversineKm(driverCoords, customerCoords);
+    const etaMinutes = estimateEtaMinutes(distanceKm, data.speed_kmh, data.status);
+    return { driverCoords, customerCoords, distanceKm, etaMinutes };
+  }
+
+  function animateMarker(instance, markerKey, targetCoords, type) {
+    const currentMarker = instance[markerKey];
+    if (!currentMarker) {
+      instance[markerKey] = L.marker(targetCoords, { icon: buildMarkerIcon(type) }).addTo(instance.map);
+      return;
+    }
+
+    const startPoint = currentMarker.getLatLng();
+    const start = [startPoint.lat, startPoint.lng];
+    const end = targetCoords;
+    const distanceKm = haversineKm(start, end);
+    if (!distanceKm || distanceKm < 0.005) {
+      currentMarker.setLatLng(end);
+      return;
+    }
+
+    const animationKey = `${markerKey}Anim`;
+    if (instance[animationKey]) cancelAnimationFrame(instance[animationKey]);
+    const startedAt = performance.now();
+    const duration = 1800;
+
+    const tick = (now) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - ((1 - progress) * (1 - progress));
+      const lat = start[0] + ((end[0] - start[0]) * eased);
+      const lng = start[1] + ((end[1] - start[1]) * eased);
+      currentMarker.setLatLng([lat, lng]);
+      if (progress < 1) {
+        instance[animationKey] = requestAnimationFrame(tick);
+      }
+    };
+
+    instance[animationKey] = requestAnimationFrame(tick);
+  }
+
+  function getLatestActiveOrder() {
+    if (!Array.isArray(window.orders)) return null;
+    const activeOrders = window.orders.filter((order) => !['Delivered', 'Cancelled'].includes(order.status));
+    if (activeOrders.length === 0) return null;
+    return activeOrders.slice().sort((a, b) => {
+      const aTime = new Date(a.orderedAt || a.time || 0).getTime() || 0;
+      const bTime = new Date(b.orderedAt || b.time || 0).getTime() || 0;
+      return bTime - aTime;
+    })[0];
+  }
+
+  function renderActiveTrackingShortcut() {
+    const sectionHeader = document.querySelector('#orders .section-header');
+    if (!sectionHeader) return;
+
+    let shortcut = document.getElementById('activeTrackingShortcut');
+    if (!shortcut) {
+      shortcut = document.createElement('div');
+      shortcut.id = 'activeTrackingShortcut';
+      shortcut.className = 'active-tracking-shortcut';
+      sectionHeader.insertAdjacentElement('afterend', shortcut);
+    }
+
+    const activeOrder = getLatestActiveOrder();
+    if (!activeOrder) {
+      shortcut.style.display = 'none';
+      shortcut.innerHTML = '';
+      return;
+    }
+
+    const itemPreview = Array.isArray(activeOrder.items)
+      ? activeOrder.items.slice(0, 2).map((item) => item.name || 'Item').join(' • ')
+      : 'Ready to track live';
+
+    shortcut.style.display = 'flex';
+    shortcut.innerHTML = `
+      <div>
+        <div class="active-tracking-label">Active delivery</div>
+        <div class="active-tracking-title">Order #${activeOrder.id} is ${activeOrder.status}</div>
+        <div class="active-tracking-meta">${itemPreview}</div>
+      </div>
+      <button class="btn-primary active-tracking-btn" type="button" onclick="trackLatestActiveOrder()">Track Latest Order</button>
+    `;
+  }
+
   function ensureMap(mapId) {
     if (state.maps[mapId] || typeof L === 'undefined') return state.maps[mapId] || null;
     const el = document.getElementById(mapId);
@@ -60,7 +193,7 @@
       if (!instance.driverMarker) {
         instance.driverMarker = L.marker(driverCoords, { icon: buildMarkerIcon('driver') }).addTo(instance.map);
       } else {
-        instance.driverMarker.setLatLng(driverCoords);
+        animateMarker(instance, 'driverMarker', driverCoords, 'driver');
       }
     } else if (instance.driverMarker) {
       instance.map.removeLayer(instance.driverMarker);
@@ -71,7 +204,7 @@
       if (!instance.customerMarker) {
         instance.customerMarker = L.marker(customerCoords, { icon: buildMarkerIcon('customer') }).addTo(instance.map);
       } else {
-        instance.customerMarker.setLatLng(customerCoords);
+        animateMarker(instance, 'customerMarker', customerCoords, 'customer');
       }
     } else if (instance.customerMarker) {
       instance.map.removeLayer(instance.customerMarker);
@@ -127,7 +260,6 @@
 
     const customerShared = isFiniteNumber(data.customer_latitude) && isFiniteNumber(data.customer_longitude);
     const driverShared = isFiniteNumber(data.latitude) && isFiniteNumber(data.longitude);
-
     customerNameEl.textContent = customerShared ? (data.customer_live_name || data.customer_name || 'Customer') : 'Waiting for customer';
     customerMetaEl.textContent = customerShared
       ? `📍 ${Number(data.customer_latitude).toFixed(5)}, ${Number(data.customer_longitude).toFixed(5)}`
@@ -136,6 +268,14 @@
     driverMetaEl.textContent = driverShared
       ? `🚗 ${Number(data.latitude).toFixed(5)}, ${Number(data.longitude).toFixed(5)}`
       : 'Driver GPS not shared yet.';
+  }
+
+  const originalRenderOrders = typeof window.renderOrders === 'function' ? window.renderOrders : null;
+  if (originalRenderOrders) {
+    window.renderOrders = function renderOrdersWithTrackingShortcut() {
+      originalRenderOrders();
+      renderActiveTrackingShortcut();
+    };
   }
 
   window.recordTrackedOrder = function recordTrackedOrder(trackData) {
@@ -288,6 +428,14 @@
     const stepIdx = STEPS.indexOf(data.status);
     const customerShared = isFiniteNumber(data.customer_latitude) && isFiniteNumber(data.customer_longitude);
     const driverShared = isFiniteNumber(data.latitude) && isFiniteNumber(data.longitude);
+    const metrics = getTrackingMetrics(data);
+    const distanceLabel = formatDistance(metrics.distanceKm);
+    const etaLabel = formatEta(metrics.etaMinutes, data.status);
+    const routeHint = driverShared && customerShared
+      ? `${distanceLabel} • ${etaLabel}`
+      : driverShared
+        ? 'Driver is live. Waiting for customer location to estimate ETA.'
+        : 'Live ETA will appear when the driver starts sharing.';
 
     result.innerHTML = `
       <div class="track-card">
@@ -304,6 +452,20 @@
         <div class="tracking-presence-row">
           <div class="presence-pill ${customerShared ? 'active' : ''}">${customerShared ? '📍 Customer live' : '📍 Customer not sharing yet'}</div>
           <div class="presence-pill ${driverShared ? 'active driver' : ''}">${driverShared ? '🚗 Driver live' : '🚗 Driver GPS not live yet'}</div>
+        </div>
+        <div class="tracking-metric-grid">
+          <div class="tracking-metric-card">
+            <span class="tracking-metric-label">Distance</span>
+            <strong class="tracking-metric-value">${distanceLabel}</strong>
+          </div>
+          <div class="tracking-metric-card">
+            <span class="tracking-metric-label">Estimated arrival</span>
+            <strong class="tracking-metric-value">${etaLabel}</strong>
+          </div>
+          <div class="tracking-metric-card">
+            <span class="tracking-metric-label">Live route</span>
+            <strong class="tracking-metric-value">${routeHint}</strong>
+          </div>
         </div>
         <div class="track-progress">
           ${STEPS.map((step, i) => `
@@ -340,7 +502,7 @@
       document.getElementById('driverCardSpeed').textContent = driverShared
         ? (data.speed_kmh > 0 ? `🏎️ ${Math.round(data.speed_kmh)} km/h` : '🅿️ Stopped')
         : 'GPS offline';
-      document.getElementById('driverCardEta').textContent = data.status === 'Delivered' ? '✅ Delivered' : '🕐 En route';
+      document.getElementById('driverCardEta').textContent = data.status === 'Delivered' ? 'Delivered' : etaLabel;
       document.getElementById('liveMapTitle').textContent = driverShared && customerShared ? 'Live customer & driver map' : 'Live delivery map';
       document.getElementById('liveMapUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
       renderAudienceCards(data, 'customer');
@@ -361,6 +523,15 @@
       input.value = numId || orderId;
     }
     window.trackOrder();
+  };
+
+  window.trackLatestActiveOrder = function trackLatestActiveOrder() {
+    const activeOrder = getLatestActiveOrder();
+    if (!activeOrder) {
+      showToast('No active order is available to track right now.');
+      return;
+    }
+    window.trackOrderById(activeOrder.id);
   };
 
   window.toggleCustomerLocationSharing = function toggleCustomerLocationSharing() {
@@ -473,11 +644,17 @@
         const res = await fetch(`${API_BASE}/tracking?order_id=${orderId}`);
         if (!res.ok) return;
         const data = await res.json();
+        const metrics = getTrackingMetrics(data);
         liveView.style.display = 'block';
         updateMap('driverLiveMap', data);
         renderAudienceCards(data, 'driver');
         const updatedEl = document.getElementById('driverLiveUpdated');
-        if (updatedEl) updatedEl.textContent = 'Updated ' + new Date().toLocaleTimeString();
+        if (updatedEl) {
+          const summary = Number.isFinite(metrics.distanceKm)
+            ? `${formatDistance(metrics.distanceKm)} • ${formatEta(metrics.etaMinutes, data.status)}`
+            : 'Waiting for both live locations';
+          updatedEl.textContent = `${summary} • Updated ${new Date().toLocaleTimeString()}`;
+        }
       } catch (_) {}
     };
 
@@ -563,4 +740,6 @@
     if (liveView) liveView.style.display = 'none';
     showToast('📴 Location sharing stopped');
   };
+
+  renderActiveTrackingShortcut();
 })();
