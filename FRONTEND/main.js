@@ -389,7 +389,7 @@ function getFoodImageForItem(item) {
     { key: 'pepperoni pizza', url: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=1000&q=80' },
     { key: 'bbq chicken pizza', url: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=1000&q=80' },
     { key: 'waakye special', url: 'https://upload.wikimedia.org/wikipedia/commons/7/7e/LOCAL_FOOD_CALLED_WAAKYE_IN_GHANA.jpg' },
-    { key: 'jollof rice special', url: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Jollof%20%28Jollof-%20Rice%29.jpg' },
+    { key: 'jollof rice special', url: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/Jollof_%28Jollof-_Rice%29.jpg' },
     { key: 'grilled chicken combo', url: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=1000&q=80' },
     { key: 'spicy wings', url: 'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=1000&q=80' },
     { key: 'chicken shawarma', url: 'https://images.unsplash.com/photo-1529006557810-274b9b2fc783?auto=format&fit=crop&w=1000&q=80' },
@@ -405,7 +405,7 @@ function getFoodImageForItem(item) {
 
   // Local dishes and drinks often come from the backend with shorter names.
   if (dishText.includes('waakye')) return 'https://upload.wikimedia.org/wikipedia/commons/7/7e/LOCAL_FOOD_CALLED_WAAKYE_IN_GHANA.jpg';
-  if (dishText.includes('jollof')) return 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Jollof%20%28Jollof-%20Rice%29.jpg';
+  if (dishText.includes('jollof')) return 'https://upload.wikimedia.org/wikipedia/commons/0/0d/Jollof_%28Jollof-_Rice%29.jpg';
   if (dishText.includes('sobolo') || dishText.includes('hibiscus')) return 'https://images.unsplash.com/photo-1556881286-fc6915169721?auto=format&fit=crop&w=1000&q=80';
 
   // Category-based food photos
