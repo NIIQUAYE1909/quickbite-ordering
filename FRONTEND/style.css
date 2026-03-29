@@ -2057,25 +2057,18 @@ footer {
   transition: border-color 0.2s, transform 0.2s;
 }
 
-.footer-socials a svg {
+.footer-social-icon {
   width: 18px;
   height: 18px;
   display: block;
+  object-fit: contain;
 }
 
 .footer-socials a:hover { border-color: var(--accent); transform: translateY(-2px); }
 
-.footer-socials a.social-instagram {
-  color: #d946ef;
-}
-
 .footer-socials a.social-instagram:hover {
   border-color: #d946ef;
   box-shadow: 0 8px 20px rgba(217,70,239,0.22);
-}
-
-.footer-socials a.social-x {
-  color: var(--text);
 }
 
 .footer-socials a.social-x:hover {
@@ -2083,17 +2076,9 @@ footer {
   box-shadow: 0 8px 20px rgba(255,255,255,0.12);
 }
 
-.footer-socials a.social-whatsapp {
-  color: #25d366;
-}
-
 .footer-socials a.social-whatsapp:hover {
   border-color: #25d366;
   box-shadow: 0 8px 20px rgba(37,211,102,0.22);
-}
-
-.footer-socials a.social-tiktok {
-  color: #ff4fa3;
 }
 
 .footer-socials a.social-tiktok:hover {
