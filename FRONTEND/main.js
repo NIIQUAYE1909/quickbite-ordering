@@ -397,11 +397,11 @@ function getFoodImageForItem(item) {
     { key: 'pepperoni pizza', url: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=1000&q=80' },
     { key: 'bbq chicken pizza', url: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=1000&q=80' },
     { key: 'waakye special', url: 'https://upload.wikimedia.org/wikipedia/commons/7/7e/LOCAL_FOOD_CALLED_WAAKYE_IN_GHANA.jpg?v=2' },
-    { key: 'jollof rice special', url: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/Jollof_%28Jollof-_Rice%29.jpg?v=2' },
-    { key: 'fufu & light soup', url: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Goat_Light_Soup_and_Fufu.jpg?v=2' },
-    { key: 'kenkey & fried fish', url: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Ga_Kenkey.jpg?v=2' },
-    { key: 'ampesi & kontomire', url: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Ampesi_and_kontomire_stew.jpg?v=2' },
-    { key: 'tuo zaafi special', url: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Tuo_zaafi.jpg?v=2' },
+    { key: 'jollof rice special', url: '/assets/foods/jollof-rice.jpg?v=3' },
+    { key: 'fufu & light soup', url: '/assets/foods/fufu-light-soup.jpg?v=3' },
+    { key: 'kenkey & fried fish', url: '/assets/foods/kenkey-fried-fish.jpg?v=3' },
+    { key: 'ampesi & kontomire', url: '/assets/foods/ampesi-kontomire.jpg?v=3' },
+    { key: 'tuo zaafi special', url: '/assets/foods/tuo-zaafi.jpg?v=3' },
     { key: 'grilled chicken combo', url: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=1000&q=80' },
     { key: 'spicy wings', url: 'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=1000&q=80' },
     { key: 'chicken shawarma', url: 'https://images.unsplash.com/photo-1529006557810-274b9b2fc783?auto=format&fit=crop&w=1000&q=80' },
@@ -409,7 +409,7 @@ function getFoodImageForItem(item) {
     { key: 'chocolate lava cake', url: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Chocolate_lava_cake.jpg' },
     { key: 'strawberry cheesecake', url: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=1000&q=80' },
     { key: 'fresh fruit smoothie', url: 'https://images.unsplash.com/photo-1502741224143-90386d7f8c82?auto=format&fit=crop&w=1000&q=80' },
-    { key: 'sobolo delight', url: 'https://upload.wikimedia.org/wikipedia/commons/a/a0/Zobo%28hibiscus%29_drink.jpg?v=2' }
+    { key: 'sobolo delight', url: '/assets/foods/sobolo-drink.jpg?v=3' }
   ];
 
   const exact = byName.find((x) => dishText.includes(x.key));
@@ -417,12 +417,12 @@ function getFoodImageForItem(item) {
 
   // Local dishes and drinks often come from the backend with shorter names.
   if (dishText.includes('waakye')) return 'https://upload.wikimedia.org/wikipedia/commons/7/7e/LOCAL_FOOD_CALLED_WAAKYE_IN_GHANA.jpg?v=2';
-  if (dishText.includes('jollof')) return 'https://upload.wikimedia.org/wikipedia/commons/0/0d/Jollof_%28Jollof-_Rice%29.jpg?v=2';
-  if (dishText.includes('fufu') && dishText.includes('light soup')) return 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Goat_Light_Soup_and_Fufu.jpg?v=2';
-  if (dishText.includes('kenkey') && dishText.includes('fish')) return 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Ga_Kenkey.jpg?v=2';
-  if (dishText.includes('ampesi') && dishText.includes('kontomire')) return 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Ampesi_and_kontomire_stew.jpg?v=2';
-  if (dishText.includes('tuo zaafi') || dishText.includes('tz special')) return 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Tuo_zaafi.jpg?v=2';
-  if (dishText.includes('sobolo') || dishText.includes('hibiscus')) return 'https://upload.wikimedia.org/wikipedia/commons/a/a0/Zobo%28hibiscus%29_drink.jpg?v=2';
+  if (dishText.includes('jollof')) return '/assets/foods/jollof-rice.jpg?v=3';
+  if (dishText.includes('fufu') && dishText.includes('light soup')) return '/assets/foods/fufu-light-soup.jpg?v=3';
+  if (dishText.includes('kenkey') && dishText.includes('fish')) return '/assets/foods/kenkey-fried-fish.jpg?v=3';
+  if (dishText.includes('ampesi') && dishText.includes('kontomire')) return '/assets/foods/ampesi-kontomire.jpg?v=3';
+  if (dishText.includes('tuo zaafi') || dishText.includes('tz special')) return '/assets/foods/tuo-zaafi.jpg?v=3';
+  if (dishText.includes('sobolo') || dishText.includes('hibiscus')) return '/assets/foods/sobolo-drink.jpg?v=3';
 
   // Category-based food photos
   if (category === 'burger') return 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1000&q=80';
