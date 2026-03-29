@@ -14,12 +14,13 @@ import com.sun.net.httpserver.HttpExchange;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 
 public class Server {
     private static final String DEFAULT_ADMIN_USERNAME = "admin";
     private static final String DEFAULT_ADMIN_PASSWORD = "quickbite2025";
-    private static final String DEFAULT_ADMIN_TOKEN = "quickbite-admin-token";
+    private static volatile String activeAdminToken = null;
 
     // The port our server listens on
     // Frontend will send requests to: http://localhost:8080/api/...
@@ -103,14 +104,22 @@ public class Server {
         return env != null && !env.trim().isEmpty() ? env.trim() : DEFAULT_ADMIN_PASSWORD;
     }
 
-    public static String getAdminToken() {
-        String env = System.getenv("ADMIN_TOKEN");
-        return env != null && !env.trim().isEmpty() ? env.trim() : DEFAULT_ADMIN_TOKEN;
+    public static synchronized String issueAdminToken() {
+        activeAdminToken = "admin-" + UUID.randomUUID();
+        return activeAdminToken;
+    }
+
+    public static synchronized void clearAdminToken() {
+        activeAdminToken = null;
+    }
+
+    public static synchronized boolean isActiveAdminToken(String token) {
+        return token != null && !token.trim().isEmpty() && token.equals(activeAdminToken);
     }
 
     public static boolean isAuthorizedAdmin(HttpExchange exchange) {
         String token = exchange.getRequestHeaders().getFirst("X-Admin-Token");
-        return token != null && token.equals(getAdminToken());
+        return isActiveAdminToken(token);
     }
 
     // ---- SEND RESPONSE HELPER ----

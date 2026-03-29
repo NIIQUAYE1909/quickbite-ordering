@@ -21,6 +21,16 @@ public class AdminRoutes implements HttpHandler {
             return;
         }
 
+        if (method.equalsIgnoreCase("POST") && path.endsWith("/logout")) {
+            logout(exchange);
+            return;
+        }
+
+        if (method.equalsIgnoreCase("GET") && path.endsWith("/session")) {
+            session(exchange);
+            return;
+        }
+
         Server.sendResponse(exchange, 404, "{\"error\":\"Not found\"}");
     }
 
@@ -31,9 +41,10 @@ public class AdminRoutes implements HttpHandler {
             String password = extractJsonValue(body, "password");
 
             if (username.equals(Server.getAdminUsername()) && password.equals(Server.getAdminPassword())) {
+                String token = Server.issueAdminToken();
                 Server.sendResponse(exchange, 200, "{"
                     + "\"message\":\"Admin login successful.\","
-                    + "\"token\":\"" + escapeJson(Server.getAdminToken()) + "\""
+                    + "\"token\":\"" + escapeJson(token) + "\""
                     + "}");
                 return;
             }
@@ -42,6 +53,35 @@ public class AdminRoutes implements HttpHandler {
         } catch (Exception e) {
             System.out.println("Error during admin login: " + e.getMessage());
             Server.sendResponse(exchange, 500, "{\"error\":\"Unable to log in right now.\"}");
+        }
+    }
+
+    private void logout(HttpExchange exchange) throws IOException {
+        try {
+            if (!Server.isAuthorizedAdmin(exchange)) {
+                Server.sendResponse(exchange, 401, "{\"error\":\"Admin session already expired.\"}");
+                return;
+            }
+
+            Server.clearAdminToken();
+            Server.sendResponse(exchange, 200, "{\"message\":\"Admin logged out.\"}");
+        } catch (Exception e) {
+            System.out.println("Error during admin logout: " + e.getMessage());
+            Server.sendResponse(exchange, 500, "{\"error\":\"Unable to log out right now.\"}");
+        }
+    }
+
+    private void session(HttpExchange exchange) throws IOException {
+        try {
+            if (!Server.isAuthorizedAdmin(exchange)) {
+                Server.sendResponse(exchange, 401, "{\"error\":\"Admin session expired.\"}");
+                return;
+            }
+
+            Server.sendResponse(exchange, 200, "{\"valid\":true}");
+        } catch (Exception e) {
+            System.out.println("Error checking admin session: " + e.getMessage());
+            Server.sendResponse(exchange, 500, "{\"error\":\"Unable to verify admin session.\"}");
         }
     }
 

@@ -239,6 +239,7 @@ window.addEventListener('beforeunload', () => {
   if (isAdminPortal()) {
     releaseAdminPortalLock();
     stopAdminPortalHeartbeat();
+    stopAdminSessionMonitor();
   }
 });
 
@@ -1061,6 +1062,7 @@ const ADMIN_PORTAL_TAB_ID_KEY = 'qb_admin_portal_tab_id';
 const ADMIN_PORTAL_NOTICE_KEY = 'qb_admin_portal_notice';
 const ADMIN_PORTAL_LOCK_TTL_MS = 15000;
 const ADMIN_PORTAL_HEARTBEAT_MS = 5000;
+const ADMIN_SESSION_POLL_MS = 5000;
 const adminPortalTabId = (() => {
   const existingTabId = sessionStorage.getItem(ADMIN_PORTAL_TAB_ID_KEY);
   if (existingTabId) return existingTabId;
@@ -1069,6 +1071,7 @@ const adminPortalTabId = (() => {
   return nextTabId;
 })();
 let adminPortalHeartbeat = null;
+let adminSessionMonitor = null;
 
 function getAdminHeaders() {
   const token = localStorage.getItem('qb_admin_token') || '';
@@ -1184,6 +1187,71 @@ function notifyPendingAdminPortalMessage() {
   setTimeout(() => showToast(`⚠️ ${notice}`), 250);
 }
 
+function stopAdminSessionMonitor() {
+  if (adminSessionMonitor) {
+    clearInterval(adminSessionMonitor);
+    adminSessionMonitor = null;
+  }
+}
+
+function clearAdminClientSession() {
+  isAdminLoggedIn = false;
+  localStorage.removeItem('qb_admin_logged_in');
+  localStorage.removeItem('qb_admin_token');
+  releaseAdminPortalLock();
+  stopAdminPortalHeartbeat();
+  stopAdminSessionMonitor();
+  syncAdminAccess();
+}
+
+function handleAdminSessionExpired(message = 'Admin session ended because another device signed in.') {
+  clearAdminClientSession();
+  showToast(`⚠️ ${message}`);
+  if (isAdminPortal()) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('portal');
+    url.hash = 'home';
+    setTimeout(() => {
+      window.location.href = url.toString();
+    }, 300);
+  }
+}
+
+async function verifyActiveAdminSession() {
+  const token = localStorage.getItem('qb_admin_token');
+  if (!token || !isAdminLoggedIn || !isAdminPortal()) return;
+
+  try {
+    const response = await fetch(`${API_BASE}/admin/session`, {
+      headers: getAdminHeaders()
+    });
+
+    if (response.status === 401) {
+      handleAdminSessionExpired();
+    }
+  } catch (_) {
+    // Ignore temporary network issues. Real admin actions still surface failures.
+  }
+}
+
+function startAdminSessionMonitor() {
+  stopAdminSessionMonitor();
+  if (!isAdminLoggedIn || !isAdminPortal()) return;
+  adminSessionMonitor = window.setInterval(() => {
+    verifyActiveAdminSession();
+  }, ADMIN_SESSION_POLL_MS);
+}
+
+async function fetchAdminResource(url, options = {}) {
+  const headers = { ...(options.headers || {}), ...getAdminHeaders() };
+  const response = await fetch(url, { ...options, headers });
+  if (response.status === 401) {
+    handleAdminSessionExpired();
+    throw new Error('Admin session expired');
+  }
+  return response;
+}
+
 function syncAdminAccess() {
   const adminSection = document.getElementById('admin');
   if (adminSection) {
@@ -1234,6 +1302,7 @@ function verifyAdmin() {
       document.getElementById('adminUsername').value = '';
       document.getElementById('adminPassword').value = '';
       syncAdminAccess();
+      startAdminSessionMonitor();
       showToast('✅ Admin logged in successfully');
       const adminTab = window.open(getAdminPortalUrl(), '_blank', 'noopener');
       if (!adminTab) window.location.href = getAdminPortalUrl();
@@ -1245,13 +1314,20 @@ function verifyAdmin() {
     });
 }
 
-function logoutAdmin() {
-  isAdminLoggedIn = false;
-  localStorage.removeItem('qb_admin_logged_in');
-  localStorage.removeItem('qb_admin_token');
-  releaseAdminPortalLock();
-  stopAdminPortalHeartbeat();
-  syncAdminAccess();
+async function logoutAdmin() {
+  const token = localStorage.getItem('qb_admin_token');
+  if (token) {
+    try {
+      await fetch(`${API_BASE}/admin/logout`, {
+        method: 'POST',
+        headers: getAdminHeaders()
+      });
+    } catch (_) {
+      // Keep logout resilient even if the backend is temporarily unavailable.
+    }
+  }
+
+  clearAdminClientSession();
   if (isAdminPortal()) {
     const url = new URL(window.location.href);
     url.searchParams.delete('portal');
@@ -1268,14 +1344,18 @@ function checkAdminLogin() {
   isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true' && !!localStorage.getItem('qb_admin_token');
   syncAdminAccess();
   if (isAdminPortal() && !isAdminLoggedIn) {
+    stopAdminSessionMonitor();
     showModal('adminLoginModal');
     return;
   }
   if (isAdminLoggedIn && isAdminPortal()) {
+    startAdminSessionMonitor();
     loadAllOrdersAdmin();
     loadAllComplaintsAdmin();
     setTimeout(() => scrollToSection('admin'), 100);
+    return;
   }
+  stopAdminSessionMonitor();
 }
 
 // ========== ADMIN PANEL FUNCTIONS ==========
@@ -1296,11 +1376,10 @@ async function loadAllOrdersAdmin() {
   if (usersList) usersList.innerHTML = '<div class="empty-orders">Loading registered users...</div>';
   
   try {
-    const adminHeaders = getAdminHeaders();
     const [response, usersResponse, usersListResponse] = await Promise.all([
-      fetch(`${API_BASE}/orders`, { headers: adminHeaders }),
-      fetch(`${API_BASE}/users/stats`, { headers: adminHeaders }).catch(() => null),
-      fetch(`${API_BASE}/users`, { headers: adminHeaders }).catch(() => null)
+      fetchAdminResource(`${API_BASE}/orders`),
+      fetchAdminResource(`${API_BASE}/users/stats`).catch(() => null),
+      fetchAdminResource(`${API_BASE}/users`).catch(() => null)
     ]);
     const dbOrders = await response.json();
     const userStats = usersResponse && usersResponse.ok
@@ -1398,10 +1477,9 @@ async function assignDriver(orderId) {
   }
   
   try {
-    const adminHeaders = { 'Content-Type': 'application/json', ...getAdminHeaders() };
-    const response = await fetch(`${API_BASE}/orders/${orderId}/driver`, {
+    const response = await fetchAdminResource(`${API_BASE}/orders/${orderId}/driver`, {
       method: 'PUT',
-      headers: adminHeaders,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ driver_name: driverName, driver_phone: driverPhone })
     });
     
@@ -1420,10 +1498,9 @@ async function assignDriver(orderId) {
 
 async function updateOrderStatus(orderId, newStatus) {
   try {
-    const adminHeaders = { 'Content-Type': 'application/json', ...getAdminHeaders() };
-    const response = await fetch(`${API_BASE}/orders/${orderId}/status`, {
+    const response = await fetchAdminResource(`${API_BASE}/orders/${orderId}/status`, {
       method: 'PUT',
-      headers: adminHeaders,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus })
     });
     
@@ -2199,7 +2276,7 @@ async function loadAllComplaintsAdmin() {
   list.innerHTML = '<div class="empty-orders">Loading customer concerns...</div>';
 
   try {
-    const response = await fetch(`${API_BASE}/complaints`, { headers: getAdminHeaders() });
+    const response = await fetchAdminResource(`${API_BASE}/complaints`);
     const complaints = await response.json();
     const localDrafts = pendingComplaints.map((complaint) => ({ ...complaint, local_only: true }));
     const mergedComplaints = Array.isArray(complaints) ? [...localDrafts, ...complaints] : localDrafts;
