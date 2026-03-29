@@ -66,6 +66,27 @@
       <button class="mobile-drawer-btn mobile-drawer-primary" type="button" onclick="showModal('loginModal'); closeMobileMenu()">Sign In</button>
     </div>
   </div>
+  <div class="mobile-drawer-backdrop" id="mobileDrawerBackdrop" onclick="closeMobileMenu()"></div>
+
+  <nav class="mobile-quickbar" aria-label="Quick actions">
+    <button class="mobile-quickbar-btn" type="button" onclick="scrollToTop()">
+      <span>🏠</span>
+      <b>Home</b>
+    </button>
+    <button class="mobile-quickbar-btn" type="button" onclick="scrollToMenu()">
+      <span>🍽️</span>
+      <b>Menu</b>
+    </button>
+    <button class="mobile-quickbar-btn" type="button" onclick="scrollToSection('orders')">
+      <span>📦</span>
+      <b>Orders</b>
+    </button>
+    <button class="mobile-quickbar-btn mobile-quickbar-cart" type="button" onclick="toggleCart()">
+      <span>🛒</span>
+      <b>Cart</b>
+      <small class="mobile-quickbar-count" id="mobileCartCount">0</small>
+    </button>
+  </nav>
 
   <!-- ========== HERO SECTION ========== -->
   <section class="hero" id="home">

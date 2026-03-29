@@ -303,6 +303,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeAllModals();
+      closeMobileMenu();
       if (document.getElementById('cartSidebar').classList.contains('open')) toggleCart();
       if (document.getElementById('wishlistSidebar').classList.contains('open')) toggleWishlist();
     }
@@ -795,11 +796,13 @@ function updateCartUI() {
   const cartItemsEl  = document.getElementById('cartItems');
   const cartFooterEl = document.getElementById('cartFooter');
   const cartCountEl  = document.getElementById('cartCount');
+  const mobileCartCountEl = document.getElementById('mobileCartCount');
   const promoSection = document.getElementById('promoSection');
   const cartInstructions = document.getElementById('cartInstructions');
 
   const totalItems = cart.reduce((sum, i) => sum + i.qty, 0);
   cartCountEl.textContent = totalItems;
+  if (mobileCartCountEl) mobileCartCountEl.textContent = totalItems;
 
   if (cart.length === 0) {
     const activePromoNotice = activePromo && promoCodes[activePromo]
@@ -860,6 +863,7 @@ function updateCartUI() {
 function toggleCart() {
   const sidebar = document.getElementById('cartSidebar');
   const overlay = document.getElementById('cartOverlay');
+  closeMobileMenu();
   // Close wishlist if open
   if (document.getElementById('wishlistSidebar').classList.contains('open')) {
     document.getElementById('wishlistSidebar').classList.remove('open');
@@ -867,6 +871,7 @@ function toggleCart() {
   }
   sidebar.classList.toggle('open');
   overlay.classList.toggle('open');
+  document.body.classList.toggle('side-panel-open', sidebar.classList.contains('open'));
 }
 
 // ---------- PROMO CODES ----------
@@ -1005,12 +1010,14 @@ function updateWishlistUI() {
 function toggleWishlist() {
   const sidebar = document.getElementById('wishlistSidebar');
   const overlay = document.getElementById('wishlistOverlay');
+  closeMobileMenu();
   if (document.getElementById('cartSidebar').classList.contains('open')) {
     document.getElementById('cartSidebar').classList.remove('open');
     document.getElementById('cartOverlay').classList.remove('open');
   }
   sidebar.classList.toggle('open');
   overlay.classList.toggle('open');
+  document.body.classList.toggle('side-panel-open', sidebar.classList.contains('open'));
 }
 
 // ---------- CHECKOUT & ORDER ----------
@@ -2426,6 +2433,7 @@ function closeProtectedPanels() {
     const el = document.getElementById(id);
     if (el) el.classList.remove('open');
   });
+  document.body.classList.remove('side-panel-open');
 }
 
 function requireAuth(message = 'Please sign in to continue.') {
@@ -2658,7 +2666,12 @@ function togglePassword(fieldId) {
 // ---------- NAV HELPERS ----------
 function scrollToSection(id) {
   const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: 'smooth' });
+  if (!el) return;
+  closeMobileMenu();
+  const navbar = document.getElementById('navbar');
+  const navOffset = navbar ? navbar.offsetHeight + 14 : 0;
+  const top = window.scrollY + el.getBoundingClientRect().top - navOffset;
+  window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
 }
 
 function navigateFooterSection(id, label) {
@@ -2672,25 +2685,38 @@ function openFooterModal(id, label) {
 }
 
 function scrollToTop() {
+  closeMobileMenu();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function scrollToMenu() {
   const el = document.getElementById('menu');
-  if (el) el.scrollIntoView({ behavior: 'smooth' });
+  if (!el) return;
+  closeMobileMenu();
+  const navbar = document.getElementById('navbar');
+  const navOffset = navbar ? navbar.offsetHeight + 14 : 0;
+  const top = window.scrollY + el.getBoundingClientRect().top - navOffset;
+  window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
 }
 
 function toggleMobileMenu() {
   const drawer = document.getElementById('mobileDrawer');
   const hamburger = document.getElementById('hamburger');
+  const backdrop = document.getElementById('mobileDrawerBackdrop');
   if (!drawer) return;
+  closeProtectedPanels();
   drawer.classList.toggle('open');
   if (hamburger) hamburger.classList.toggle('active', drawer.classList.contains('open'));
+  if (backdrop) backdrop.classList.toggle('open', drawer.classList.contains('open'));
+  document.body.classList.toggle('nav-surface-open', drawer.classList.contains('open'));
 }
 
 function closeMobileMenu() {
   const drawer = document.getElementById('mobileDrawer');
   const hamburger = document.getElementById('hamburger');
+  const backdrop = document.getElementById('mobileDrawerBackdrop');
   if (drawer) drawer.classList.remove('open');
   if (hamburger) hamburger.classList.remove('active');
+  if (backdrop) backdrop.classList.remove('open');
+  document.body.classList.remove('nav-surface-open');
 }
