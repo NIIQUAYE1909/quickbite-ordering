@@ -690,10 +690,13 @@ function updateCartUI() {
   cartCountEl.textContent = totalItems;
 
   if (cart.length === 0) {
-    cartItemsEl.innerHTML = `<div class="empty-cart">Your cart is empty 😔<br/><small>Add some delicious food!</small></div>`;
+    const activePromoNotice = activePromo && promoCodes[activePromo]
+      ? `<div class="cart-promo-ready">🎟️ ${promoCodes[activePromo].desc} is active. Add an item to use it.</div>`
+      : '';
+    cartItemsEl.innerHTML = `<div class="empty-cart">${activePromoNotice}Your cart is empty 😔<br/><small>Add some delicious food!</small></div>`;
     cartFooterEl.style.display = 'none';
-    if (promoSection) promoSection.style.display = 'none';
-    if (cartInstructions) cartInstructions.style.display = 'none';
+    if (promoSection) promoSection.style.display = activePromo ? 'block' : 'none';
+    if (cartInstructions) cartInstructions.style.display = activePromo ? 'block' : 'none';
     return;
   }
 
@@ -786,16 +789,17 @@ function activateOffer(code, category = null) {
 
   applyPromo(code);
 
+  const cartSidebar = document.getElementById('cartSidebar');
+  if (cartSidebar && !cartSidebar.classList.contains('open')) {
+    toggleCart();
+  }
+
   if (category) {
     const activeCategoryButton = document.querySelector(`.cat-pill[data-cat="${category}"]`);
     filterCategory(category, activeCategoryButton || undefined);
   }
 
   if (cart.length > 0) {
-    const cartSidebar = document.getElementById('cartSidebar');
-    if (cartSidebar && !cartSidebar.classList.contains('open')) {
-      toggleCart();
-    }
     return;
   }
 
