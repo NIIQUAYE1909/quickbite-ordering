@@ -73,11 +73,16 @@
       <div class="hero-badge">🔥 Fast Delivery in Sekondi-Takoradi</div>
       <h1>Delicious Food,<br/><em>Delivered Fast.</em></h1>
       <p>Order from top local restaurants and get hot meals delivered straight to your door.</p>
+      <div class="hero-actions">
+        <button class="btn-primary" type="button" onclick="scrollToSection('menu')">Browse Menu</button>
+        <button class="btn-outline hero-outline-btn" type="button" onclick="scrollToSection('deliveryCoverage')">Where We Deliver</button>
+      </div>
       <div class="search-bar">
         <span class="search-icon">🔍</span>
         <input type="text" id="searchInput" placeholder="Search for food, restaurants..." oninput="filterMenu()"/>
         <button type="button" onclick="submitSearch()">Search</button>
       </div>
+      <p class="hero-scroll-note">Browse first, save favourites, and sign in only when you are ready to checkout.</p>
       <div class="hero-stats">
         <div class="stat"><strong>200+</strong><span>Restaurants</span></div>
         <div class="stat"><strong>30min</strong><span>Avg. Delivery</span></div>
@@ -88,6 +93,20 @@
       <div class="float-card" onclick="scrollToSection('menu')">🍔<div><p>Smash Burger</p><b>GH₵45</b></div></div>
       <div class="float-card mid" onclick="scrollToSection('menu')">🍜<div><p>Waakye Special</p><b>GH₵25</b></div></div>
       <div class="float-card" onclick="scrollToSection('menu')">🍕<div><p>Pepperoni Pizza</p><b>GH₵80</b></div></div>
+    </div>
+  </section>
+
+  <section class="delivery-coverage-section" id="deliveryCoverage">
+    <div class="section-header">
+      <h2 class="section-title">Delivery <span>Coverage</span></h2>
+      <p class="menu-count">Pick your zone at checkout and add a landmark so riders find you faster.</p>
+    </div>
+    <div class="coverage-grid">
+      <div class="coverage-card"><strong>Takoradi Central</strong><span>GH₵5 delivery</span></div>
+      <div class="coverage-card"><strong>Sekondi</strong><span>GH₵8 delivery</span></div>
+      <div class="coverage-card"><strong>Effia-Kwesimintsim</strong><span>GH₵10 delivery</span></div>
+      <div class="coverage-card"><strong>Airport Ridge</strong><span>GH₵12 delivery</span></div>
+      <div class="coverage-card"><strong>Anaji / Apremdo</strong><span>GH₵15 delivery</span></div>
     </div>
   </section>
 
@@ -268,6 +287,10 @@
           <div class="form-group">
             <label>Delivery Address</label>
             <input type="text" id="checkoutAddress" placeholder="Area, Street, House No."/>
+          </div>
+          <div class="form-group">
+            <label>Landmark / Location Note</label>
+            <input type="text" id="checkoutLandmark" placeholder="Near shell station, blue gate, upstairs, etc."/>
           </div>
           <div class="form-group">
             <label>Delivery Zone</label>

@@ -454,8 +454,6 @@ function applyFilters() {
 
 // ---------- CART ----------
 function addToCart(itemId) {
-  if (!requireAuth('Sign in to add this item to your cart, or create an account if you are new here.')) return;
-
   const item = menuData.find(i => i.id === itemId);
   if (!item) return;
 
@@ -469,6 +467,9 @@ function addToCart(itemId) {
   updateCartUI();
   saveState();
   showToast(`${item.emoji} ${item.name} added to cart!`);
+  if (!currentUser) {
+    setAuthFeedback('loginFeedback', 'You can browse and build your cart first. Sign in when you are ready to checkout.');
+  }
 
   // Bump animation on cart count
   const cc = document.getElementById('cartCount');
@@ -673,6 +674,8 @@ function initiateCheckout() {
     const emailEl = document.getElementById('checkoutEmail');
     if (emailEl) emailEl.value = currentUser.email || '';
   }
+  const landmarkEl = document.getElementById('checkoutLandmark');
+  if (landmarkEl) landmarkEl.value = '';
 
   renderCheckoutSummary();
   toggleCart();
@@ -746,8 +749,10 @@ async function placeOrder() {
   const email   = document.getElementById('checkoutEmail')?.value.trim().toLowerCase() || '';
   const phone   = document.getElementById('checkoutPhone').value.trim();
   const address = document.getElementById('checkoutAddress').value.trim();
+  const landmark = document.getElementById('checkoutLandmark')?.value.trim() || '';
   const method  = document.querySelector('input[name="payment"]:checked').value;
   const instructions = document.getElementById('specialInstructions')?.value.trim() || '';
+  const fullAddress = landmark ? `${address} (Landmark: ${landmark})` : address;
 
   if (!name || !email || !phone || !address) {
     showToast('⚠️ Please fill in your delivery details, including email');
@@ -784,7 +789,7 @@ async function placeOrder() {
     customer_name: name,
     customer_email: email,
     phone: phone,
-    address: address,
+    address: fullAddress,
     total: grandTotal,
     items: cart.map(i => ({ id: i.id, qty: i.qty, price: i.price }))
   };
@@ -792,11 +797,12 @@ async function placeOrder() {
   // Data for local display (complex format)
   const orderData = {
     id: orderId,
-    customer: { name, phone, address },
+    customer: { name, phone, address: fullAddress, landmark },
     customer_name: name,
     customer_email: email,
     phone,
-    address,
+    address: fullAddress,
+    landmark,
     items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price })),
     subtotal, discount, deliveryFee, grandTotal,
     payment: method,

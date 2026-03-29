@@ -505,6 +505,34 @@ body::before {
   animation: fadeUp 0.6s 0.2s ease both;
 }
 
+.hero-actions {
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  animation: fadeUp 0.6s 0.22s ease both;
+}
+
+.hero-outline-btn {
+  color: var(--text);
+  border-color: var(--border2);
+  padding: 0.82rem 1.4rem;
+  border-radius: 999px;
+  font-size: 0.92rem;
+}
+
+.hero-outline-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.hero-scroll-note {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: -0.3rem 0 1.2rem;
+  max-width: 520px;
+}
+
 /* Search Bar */
 .search-bar {
   display: flex;
@@ -611,6 +639,35 @@ body::before {
 .offers-section {
   padding: 2rem 5rem;
   overflow: hidden;
+}
+
+.delivery-coverage-section {
+  padding: 1.5rem 5rem 0.5rem;
+}
+
+.coverage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.coverage-card {
+  background: linear-gradient(180deg, rgba(255,92,26,0.08), rgba(255,92,26,0.02));
+  border: 1px solid rgba(255,92,26,0.18);
+  border-radius: 18px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.coverage-card strong {
+  font-size: 0.98rem;
+}
+
+.coverage-card span {
+  color: var(--muted);
+  font-size: 0.84rem;
 }
 
 .offers-scroll {
@@ -1681,6 +1738,9 @@ footer {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+  .hero-actions {
+    width: 100%;
+  }
   .stat {
     background: rgba(255,255,255,0.02);
     border: 1px solid var(--border);
@@ -1691,6 +1751,7 @@ footer {
   .stat span { font-size: 0.68rem; }
   .hero-img { display: none; }
   .offers-section,
+  .delivery-coverage-section,
   .categories-section,
   .menu-section,
   .orders-section { padding-left: 1.5rem; padding-right: 1.5rem; }
@@ -1758,6 +1819,7 @@ footer {
   }
   .hero { padding-left: 1rem; padding-right: 1rem; }
   .offers-section,
+  .delivery-coverage-section,
   .categories-section,
   .menu-section,
   .orders-section,
@@ -1779,6 +1841,10 @@ footer {
     border-radius: 16px;
   }
   .hero-stats { grid-template-columns: 1fr; }
+  .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
   .categories {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
