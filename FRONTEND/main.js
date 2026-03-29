@@ -1044,9 +1044,17 @@ function clearOrders() {
 }
 
 // ========== ADMIN PANEL FUNCTIONS ==========
-// Simple admin password protection
-const ADMIN_PASSWORD = 'quickbite2025'; // Change this to your desired password
+// Simple admin credential protection
+const ADMIN_USERNAME = 'admin';
+const ADMIN_PASSWORD = 'quickbite2025';
 let isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true';
+
+function syncRoleEntryGate() {
+  const gate = document.getElementById('roleEntryGate');
+  if (!gate) return;
+  const chosenRole = localStorage.getItem('qb_entry_role');
+  gate.style.display = (chosenRole || isAdminLoggedIn) ? 'none' : 'flex';
+}
 
 function syncAdminAccess() {
   const adminSection = document.getElementById('admin');
@@ -1070,22 +1078,38 @@ function syncAdminAccess() {
 
 function showAdminLogin() {
   if (isAdminLoggedIn) {
+    localStorage.setItem('qb_entry_role', 'admin');
+    syncRoleEntryGate();
     scrollToSection('admin');
   } else {
     showModal('adminLoginModal');
   }
 }
 
+function beginAdminEntry() {
+  showModal('adminLoginModal');
+}
+
+function enterAsUser() {
+  localStorage.setItem('qb_entry_role', 'user');
+  syncRoleEntryGate();
+  closeModal('adminLoginModal');
+}
+
 function verifyAdmin() {
+  const username = document.getElementById('adminUsername').value.trim().toLowerCase();
   const password = document.getElementById('adminPassword').value;
   const errorEl = document.getElementById('adminLoginError');
   
-  if (password === ADMIN_PASSWORD) {
+  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
     isAdminLoggedIn = true;
     localStorage.setItem('qb_admin_logged_in', 'true');
+    localStorage.setItem('qb_entry_role', 'admin');
     closeModal('adminLoginModal');
     errorEl.style.display = 'none';
+    document.getElementById('adminUsername').value = '';
     document.getElementById('adminPassword').value = '';
+    syncRoleEntryGate();
     syncAdminAccess();
     loadAllOrdersAdmin();
     loadAllComplaintsAdmin();
@@ -1093,6 +1117,7 @@ function verifyAdmin() {
     scrollToSection('admin');
   } else {
     errorEl.style.display = 'block';
+    document.getElementById('adminUsername').value = '';
     document.getElementById('adminPassword').value = '';
   }
 }
@@ -1100,13 +1125,16 @@ function verifyAdmin() {
 function logoutAdmin() {
   isAdminLoggedIn = false;
   localStorage.removeItem('qb_admin_logged_in');
+  localStorage.removeItem('qb_entry_role');
   syncAdminAccess();
+  syncRoleEntryGate();
   showToast('👋 Admin logged out');
 }
 
 // Check admin login on page load
 function checkAdminLogin() {
   isAdminLoggedIn = localStorage.getItem('qb_admin_logged_in') === 'true';
+  syncRoleEntryGate();
   syncAdminAccess();
   if (isAdminLoggedIn) {
     loadAllOrdersAdmin();
@@ -1118,25 +1146,32 @@ function checkAdminLogin() {
 async function loadAllOrdersAdmin() {
   const list = document.getElementById('adminOrdersList');
   const stats = document.getElementById('adminStats');
+  const usersList = document.getElementById('adminUsersList');
   
   if (!list) { showToast('Admin panel not found'); return; }
   if (!isAdminLoggedIn) {
     list.innerHTML = '<div class="empty-orders">Admin sign-in is required to view live orders and tracking.</div>';
+    if (usersList) usersList.innerHTML = '<div class="empty-orders">Admin sign-in is required to view customer accounts.</div>';
     if (stats) stats.innerHTML = '';
     return;
   }
   
   list.innerHTML = '<div class="empty-orders">Loading orders from database...</div>';
+  if (usersList) usersList.innerHTML = '<div class="empty-orders">Loading registered users...</div>';
   
   try {
-    const [response, usersResponse] = await Promise.all([
+    const [response, usersResponse, usersListResponse] = await Promise.all([
       fetch(`${API_BASE}/orders`),
-      fetch(`${API_BASE}/users/stats`).catch(() => null)
+      fetch(`${API_BASE}/users/stats`).catch(() => null),
+      fetch(`${API_BASE}/users`).catch(() => null)
     ]);
     const dbOrders = await response.json();
     const userStats = usersResponse && usersResponse.ok
       ? await usersResponse.json().catch(() => ({ total_users: 0 }))
       : { total_users: 0 };
+    const users = usersListResponse && usersListResponse.ok
+      ? await usersListResponse.json().catch(() => [])
+      : [];
     
     if (!Array.isArray(dbOrders) || dbOrders.length === 0) {
       list.innerHTML = '<div class="empty-orders">No orders in database yet! 🍽️</div>';
@@ -1158,6 +1193,43 @@ async function loadAllOrdersAdmin() {
     
     if (stats?.firstElementChild) {
       stats.firstElementChild.insertAdjacentHTML('afterbegin', `<div style="background:var(--card); padding:1rem; border-radius:12px; text-align:center; border:1px solid var(--border);"><div style="font-size:1.8rem; font-weight:700; color:#8b5cf6;">${totalUsers}</div><div style="font-size:0.8rem; color:var(--muted);">Total Users</div></div>`);
+    }
+
+    if (usersList) {
+      if (!Array.isArray(users) || users.length === 0) {
+        usersList.innerHTML = '<div class="empty-orders">No registered users found yet.</div>';
+      } else {
+        usersList.innerHTML = `
+          <div class="admin-users-card">
+            <div class="admin-users-head">
+              <strong>Customer Directory</strong>
+              <span>${users.length} users</span>
+            </div>
+            <div class="admin-users-table-wrap">
+              <table class="admin-users-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>User ID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${users.map((user) => `
+                    <tr>
+                      <td>${user.name || 'N/A'}</td>
+                      <td>${user.email || 'N/A'}</td>
+                      <td>${user.phone || 'N/A'}</td>
+                      <td>#${user.id}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
     }
 
     list.innerHTML = dbOrders.map(order => {

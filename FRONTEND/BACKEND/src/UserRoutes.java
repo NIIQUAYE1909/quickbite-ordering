@@ -29,6 +29,8 @@ public class UserRoutes implements HttpHandler {
         if (method.equalsIgnoreCase("GET")) {
             if (path.endsWith("/stats")) {
                 getUserStats(exchange);
+            } else if (path.equals("/api/users") || path.endsWith("/list")) {
+                getUsers(exchange);
             } else {
                 Server.sendResponse(exchange, 404, "{\"error\":\"Not found\"}");
             }
@@ -61,6 +63,39 @@ public class UserRoutes implements HttpHandler {
         } catch (Exception e) {
             System.out.println("Error fetching user stats: " + e.getMessage());
             Server.sendResponse(exchange, 500, "{\"error\":\"Failed to load user stats.\"}");
+        }
+    }
+
+    private void getUsers(HttpExchange exchange) throws IOException {
+        Connection conn = DatabaseConnection.getConnection();
+
+        if (conn == null) {
+            Server.sendResponse(exchange, 500, "{\"error\":\"Database not connected. Please try again later.\"}");
+            return;
+        }
+
+        try {
+            PreparedStatement stmt = conn.prepareStatement(
+                "SELECT id, name, email, phone FROM users ORDER BY id DESC"
+            );
+            ResultSet rs = stmt.executeQuery();
+            StringBuilder json = new StringBuilder("[");
+            boolean first = true;
+            while (rs.next()) {
+                if (!first) json.append(",");
+                json.append("{")
+                    .append("\"id\":").append(rs.getInt("id")).append(",")
+                    .append("\"name\":\"").append(escapeJson(rs.getString("name"))).append("\",")
+                    .append("\"email\":\"").append(escapeJson(rs.getString("email"))).append("\",")
+                    .append("\"phone\":\"").append(escapeJson(rs.getString("phone"))).append("\"")
+                    .append("}");
+                first = false;
+            }
+            json.append("]");
+            Server.sendResponse(exchange, 200, json.toString());
+        } catch (Exception e) {
+            System.out.println("Error fetching users: " + e.getMessage());
+            Server.sendResponse(exchange, 500, "{\"error\":\"Failed to load users.\"}");
         }
     }
 
