@@ -787,6 +787,15 @@ function activateOffer(code, category = null) {
     return;
   }
 
+  const trigger = window.event?.currentTarget;
+  const card = trigger?.closest('.offer-card');
+  if (card) {
+    card.classList.remove('offer-active');
+    void card.offsetWidth;
+    card.classList.add('offer-active');
+    setTimeout(() => card.classList.remove('offer-active'), 650);
+  }
+
   applyPromo(code);
 
   const cartSidebar = document.getElementById('cartSidebar');
@@ -808,6 +817,14 @@ function activateOffer(code, category = null) {
     ? `Offer ready. Browse the ${category} dishes and add one to your cart to use it.`
     : 'Offer ready. Add an item to your cart to use it at checkout.';
   showToast(guidance);
+
+  const promoReady = document.querySelector('.cart-promo-ready');
+  if (promoReady) {
+    promoReady.classList.remove('pulse');
+    void promoReady.offsetWidth;
+    promoReady.classList.add('pulse');
+    setTimeout(() => promoReady.classList.remove('pulse'), 700);
+  }
 }
 
 function applyPromoFromCart() {
