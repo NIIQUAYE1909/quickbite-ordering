@@ -778,6 +778,14 @@ body.light-mode .mobile-quickbar {
   color: var(--accent);
 }
 
+.hero-tour-btn {
+  border-style: dashed;
+}
+
+.hero-tour-btn:hover {
+  border-style: solid;
+}
+
 .hero-scroll-note {
   color: var(--muted);
   font-size: 0.85rem;

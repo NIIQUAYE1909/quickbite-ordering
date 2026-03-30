@@ -2890,6 +2890,13 @@ function maybeStartTour() {
   setTimeout(() => startTour(), 700);
 }
 
+function restartTour() {
+  try {
+    localStorage.removeItem(TOUR_STORAGE_KEY);
+  } catch (e) {}
+  startTour(true);
+}
+
 function startTour(force = false) {
   if (!force) {
     try {
