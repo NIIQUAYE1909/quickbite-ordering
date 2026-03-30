@@ -279,24 +279,24 @@ function watchSystemTheme() {
   }
 }
 
-function updateNetworkBanner(showOnlineToast = false) {
+function updateNetworkBanner(showOnlineToast = false, silent = false) {
   const banner = document.getElementById('networkBanner');
   if (!banner) return;
 
   const online = navigator.onLine;
-  banner.hidden = false;
-  banner.classList.toggle('online', online);
-  banner.textContent = online
-    ? 'Connection restored. Live orders and checkout are available.'
-    : 'You are offline. Browsing still works, but live checkout and tracking may be delayed.';
-
   if (online) {
+    banner.classList.add('online');
+    banner.textContent = 'Connection restored. Live orders and checkout are available.';
+    banner.hidden = !showOnlineToast;
     setTimeout(() => {
       if (navigator.onLine) banner.hidden = true;
     }, 2200);
     if (showOnlineToast) showToast('Back online');
   } else {
-    showToast('You are offline');
+    banner.hidden = false;
+    banner.classList.remove('online');
+    banner.textContent = 'You are offline. Browsing still works, but live checkout and tracking may be delayed.';
+    if (!silent) showToast('You are offline');
   }
 }
 
@@ -321,10 +321,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   enforceAuthState();
   checkAdminLogin();
   maybeStartTour();
-  updateNetworkBanner(false);
+  updateNetworkBanner(false, true);
 
-  window.addEventListener('online', () => updateNetworkBanner(true));
-  window.addEventListener('offline', () => updateNetworkBanner(false));
+  window.addEventListener('online', () => updateNetworkBanner(true, false));
+  window.addEventListener('offline', () => updateNetworkBanner(false, false));
 
   // Navbar scroll shrink
   window.addEventListener('scroll', () => {
@@ -1444,6 +1444,7 @@ const adminPortalTabId = (() => {
 let adminPortalHeartbeat = null;
 let adminSessionMonitor = null;
 let adminDataRefreshTimer = null;
+let isRefreshingAdminDashboard = false;
 
 function getAdminHeaders() {
   const token = localStorage.getItem('qb_admin_token') || '';
@@ -1562,9 +1563,17 @@ function stopAdminDataRefresh() {
   }
 }
 
-function refreshAdminDashboard() {
-  loadAllOrdersAdmin();
-  loadAllComplaintsAdmin();
+async function refreshAdminDashboard() {
+  if (isRefreshingAdminDashboard) return;
+  isRefreshingAdminDashboard = true;
+  try {
+    await Promise.all([
+      loadAllOrdersAdmin(),
+      loadAllComplaintsAdmin()
+    ]);
+  } finally {
+    isRefreshingAdminDashboard = false;
+  }
 }
 
 function startAdminDataRefresh() {
@@ -1762,18 +1771,18 @@ async function loadAllOrdersAdmin() {
       ? await usersListResponse.json().catch(() => [])
       : [];
     
+    const safeOrders = Array.isArray(dbOrders) ? dbOrders : [];
+
     if (!Array.isArray(dbOrders) || dbOrders.length === 0) {
       list.innerHTML = '<div class="empty-orders">No orders in database yet! 🍽️</div>';
-      if (stats) stats.innerHTML = '';
-      return;
     }
     
     // Calculate stats
-    const totalRevenue = dbOrders.reduce((sum, o) => sum + parseFloat(o.total || 0), 0);
-    const confirmed = dbOrders.filter(o => o.status === 'Confirmed').length;
-    const preparing = dbOrders.filter(o => o.status === 'Preparing').length;
-    const onTheWay = dbOrders.filter(o => o.status === 'On the way').length;
-    const delivered = dbOrders.filter(o => o.status === 'Delivered').length;
+    const totalRevenue = safeOrders.reduce((sum, o) => sum + parseFloat(o.total || 0), 0);
+    const confirmed = safeOrders.filter(o => o.status === 'Confirmed').length;
+    const preparing = safeOrders.filter(o => o.status === 'Preparing').length;
+    const onTheWay = safeOrders.filter(o => o.status === 'On the way').length;
+    const delivered = safeOrders.filter(o => o.status === 'Delivered').length;
     const totalUsers = Number(userStats.total_users || 0);
     
     if (stats) {
@@ -1819,6 +1828,10 @@ async function loadAllOrdersAdmin() {
           </div>
         `;
       }
+    }
+
+    if (safeOrders.length === 0) {
+      return;
     }
 
     list.innerHTML = dbOrders.map(order => {
