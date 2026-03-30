@@ -279,6 +279,27 @@ function watchSystemTheme() {
   }
 }
 
+function updateNetworkBanner(showOnlineToast = false) {
+  const banner = document.getElementById('networkBanner');
+  if (!banner) return;
+
+  const online = navigator.onLine;
+  banner.hidden = false;
+  banner.classList.toggle('online', online);
+  banner.textContent = online
+    ? 'Connection restored. Live orders and checkout are available.'
+    : 'You are offline. Browsing still works, but live checkout and tracking may be delayed.';
+
+  if (online) {
+    setTimeout(() => {
+      if (navigator.onLine) banner.hidden = true;
+    }, 2200);
+    if (showOnlineToast) showToast('Back online');
+  } else {
+    showToast('You are offline');
+  }
+}
+
 // ---------- INIT ----------
 document.addEventListener('DOMContentLoaded', async () => {
   // Apply saved theme first (before anything renders)
@@ -300,6 +321,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   enforceAuthState();
   checkAdminLogin();
   maybeStartTour();
+  updateNetworkBanner(false);
+
+  window.addEventListener('online', () => updateNetworkBanner(true));
+  window.addEventListener('offline', () => updateNetworkBanner(false));
 
   // Navbar scroll shrink
   window.addEventListener('scroll', () => {

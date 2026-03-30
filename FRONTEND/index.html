@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
 </head>
 <body>
+  <div class="network-banner" id="networkBanner" role="status" aria-live="polite" hidden></div>
   <div class="auth-gate" id="authGate">
     <div class="auth-gate-card">
       <div class="auth-gate-badge">Ready To Order?</div>
@@ -733,7 +734,7 @@
   </div>
 
   <!-- ========== TOAST NOTIFICATION ========== -->
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <div class="modal-overlay" id="supportModal" onclick="closeModalOutside(event, 'supportModal')">
     <div class="modal">
